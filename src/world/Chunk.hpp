@@ -28,19 +28,24 @@ namespace pmlike::world {
 
     class Chunk {
         public:
-            static pmlike::render::ShaderProgram* shaderProgram;
+            static pmlike::render::ShaderProgram *shaderProgram;
 
             Chunk(glm::ivec3 chunkCoordinates);
+
             ~Chunk();
 
-            world::block::Block* blocks[CHUNK_SIZE_X][CHUNK_SIZE_Y][CHUNK_SIZE_Z];
+            world::block::Block *blocks[CHUNK_SIZE_X][CHUNK_SIZE_Y][CHUNK_SIZE_Z];
 
             glm::ivec3 getChunkCoordinates();
+
             bool generated = false;
 
-            void render(render::Camera* camera, double deltaTime);
+            void render(render::Camera *camera, double deltaTime);
+
             void updateMesh();
+
             bool isInFrustum(Frustum &frustum);
+
         private:
             static void initShaderProgram();
 
@@ -58,6 +63,7 @@ namespace pmlike::world {
             std::mutex glDataMutex;
 
             glm::mat4 transform;
+
             void copyToGPU();
 
             /**
@@ -65,7 +71,7 @@ namespace pmlike::world {
              * @param block
              * @return bitmask for sides
              */
-            uint8_t getVisibleSides(block::Block* block);
+            uint8_t getVisibleSides(block::Block *block);
 
     };
 

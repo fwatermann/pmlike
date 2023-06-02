@@ -14,23 +14,28 @@ namespace pmlike {
     class Game {
 
         public:
-            Game(GLFWwindow* window);
+            Game(GLFWwindow *window);
+
             ~Game();
 
             void render(float deltaTime);
+
             void mouseInput(int button, int action, int mods);
+
             void keyboardInput(int key, int scancode, int action, int mods);
+
             void mouseMove(double xpos, double ypos);
+
             void resize(int width, int height);
 
-            GLFWwindow* getWindow();
+            GLFWwindow *getWindow();
 
         private:
-            pmlike::world::World* world;
-            pmlike::render::Camera* camera;
+            pmlike::world::World *world;
+            pmlike::render::Camera *camera;
 
-            GLFWwindow* window;
-            pmlike::render::Font* font = nullptr;
+            GLFWwindow *window;
+            pmlike::render::Font *font = nullptr;
 
     };
 

@@ -13,8 +13,11 @@ namespace pmlike::world {
     class ChunkGenerator {
         public:
             ChunkGenerator();
+
             ~ChunkGenerator();
+
             virtual void generate(std::shared_ptr<world::Chunk> chunk);
+
         private:
     };
 

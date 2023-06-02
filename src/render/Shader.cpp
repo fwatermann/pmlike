@@ -8,13 +8,13 @@
 
 using namespace pmlike::render;
 
-Shader::Shader(const std::string& source, GLenum type, bool isFile) {
+Shader::Shader(const std::string &source, GLenum type, bool isFile) {
     this->source = source;
     this->type = type;
     this->isFile = isFile;
 }
 
-Shader::Shader(const Shader& other) {
+Shader::Shader(const Shader &other) {
     this->source = other.source;
     this->type = other.type;
     this->isFile = other.isFile;
@@ -26,17 +26,17 @@ Shader::~Shader() {
 }
 
 void Shader::del() {
-    if(!this->shader) return;
+    if (!this->shader) return;
     glDeleteShader(this->shader);
     this->shader = 0;
 }
 
 bool Shader::compile() {
 
-    if(this->isFile) {
+    if (this->isFile) {
         std::fstream file;
         file.open(this->source, std::ios::in);
-        if(!file.is_open()) {
+        if (!file.is_open()) {
             std::printf("Shader file not found: %s\n", this->source.c_str());
             return false;
         } else {
@@ -48,12 +48,12 @@ bool Shader::compile() {
     }
 
     this->shader = glCreateShader(this->type);
-    const char* sourceCStr = this->source.c_str();
+    const char *sourceCStr = this->source.c_str();
     glShaderSource(this->shader, 1, &sourceCStr, nullptr);
     glCompileShader(this->shader);
     GLint compiled = 0;
     glGetShaderiv(this->shader, GL_COMPILE_STATUS, &compiled);
-    if(compiled == GL_FALSE) {
+    if (compiled == GL_FALSE) {
         GLint length = 0;
         glGetShaderiv(this->shader, GL_INFO_LOG_LENGTH, &length);
         std::string log(length, ' ');

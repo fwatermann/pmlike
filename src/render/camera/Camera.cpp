@@ -97,7 +97,7 @@ void Camera::setDirection(glm::vec3 direction) {
 }
 
 void Camera::update() {
-    if(dirtyDirection) {
+    if (dirtyDirection) {
         this->front.x = glm::cos(glm::radians(this->yaw)) * glm::cos(glm::radians(this->pitch));
         this->front.y = glm::sin(glm::radians(this->pitch));
         this->front.z = glm::sin(glm::radians(this->yaw)) * glm::cos(glm::radians(this->pitch));
@@ -108,16 +108,17 @@ void Camera::update() {
         this->viewMatrix = glm::lookAt(this->position, this->position + this->front, this->up);
         this->dirtyDirection = false;
 
-        if(!dirtyProjection) {
+        if (!dirtyProjection) {
             this->frustum = Frustum(this->projectionMatrix * this->viewMatrix);
         }
     }
 
-    if(dirtyProjection) {
-        if(this->isPerspective) {
+    if (dirtyProjection) {
+        if (this->isPerspective) {
             this->projectionMatrix = glm::perspective(this->fov, this->aspectRatio, this->nearPlane, this->farPlane);
         } else {
-            this->projectionMatrix = glm::ortho(-this->aspectRatio, this->aspectRatio, -1.0F, 1.0F, this->nearPlane, this->farPlane);
+            this->projectionMatrix = glm::ortho(-this->aspectRatio, this->aspectRatio, -1.0F, 1.0F, this->nearPlane,
+                                                this->farPlane);
         }
         this->dirtyProjection = false;
         this->frustum = Frustum(this->projectionMatrix * this->viewMatrix);

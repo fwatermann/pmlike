@@ -16,26 +16,30 @@ namespace pmlike::render {
         public:
             ~Texture();
 
-            static Texture* fromFile(const std::string &path);
-            static Texture* fromData(uint8_t *data, int width, int height, int channels);
+            static Texture *fromFile(const std::string &path);
+
+            static Texture *fromData(uint8_t *data, int width, int height, int channels);
 
             void bind(GLuint slot = 0);
-            void bindToProgram(GLuint slot, ShaderProgram* program, const std::string &name);
+
+            void bindToProgram(GLuint slot, ShaderProgram *program, const std::string &name);
+
             void unbind();
 
             GLuint getHandle() const;
 
             void setMagFilter(GLint filter);
+
             void setMinFilter(GLint filter);
 
         private:
             Texture(uint8_t *data, int width, int height, int channels);
+
             GLuint handle{};
     };
 
 
 }
-
 
 
 #endif //CRAFTVENTURE_TEXTURE_H

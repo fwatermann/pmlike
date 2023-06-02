@@ -45,7 +45,8 @@ void Game::render(float deltaTime) {
     std::string dirString =
             "Yaw: " + std::to_string(this->camera->getYaw()) + ", Pitch: " + std::to_string(this->camera->getPitch());
     std::string fpsString = "FPS: " + std::to_string(fps) + " FrameTime: " + std::to_string(deltaTime * 1000) + "ms";
-    std::string render = "Render: D:" + std::to_string(this->world->renderDistance) + " C:" + std::to_string(this->world->renderedChunks);
+    std::string render = "Render: D:" + std::to_string(this->world->renderDistance) + " C:" +
+                         std::to_string(this->world->renderedChunks);
 
     this->font->renderText(fpsString.c_str(), 5, 05, 20, 0, glm::ortho(0.0f, (float) width, (float) height, 0.0f),
                            glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
@@ -94,13 +95,13 @@ void Game::keyboardInput(int key, int scancode, int action, int mods) {
     if (key == GLFW_KEY_ESCAPE) {
         glfwSetWindowShouldClose(this->window, GLFW_TRUE);
     }
-    if(key == GLFW_KEY_F11) {
-        if(action != GLFW_PRESS) return;
+    if (key == GLFW_KEY_F11) {
+        if (action != GLFW_PRESS) return;
         static bool fullscreen = false;
         fullscreen = !fullscreen;
         GLFWmonitor *monitor = glfwGetPrimaryMonitor();
         const GLFWvidmode *mode = glfwGetVideoMode(monitor);
-        if(fullscreen) {
+        if (fullscreen) {
             glfwSetWindowMonitor(this->window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
         } else {
             glfwSetWindowMonitor(this->window, nullptr, 0, 0, mode->width, mode->height, mode->refreshRate);

@@ -3,7 +3,9 @@
 //
 
 #include "Util/Log.hpp"
+
 #define STB_IMAGE_IMPLEMENTATION
+
 #include "stb_image.h"
 #include "Texture.hpp"
 
@@ -11,8 +13,8 @@ using namespace pmlike::render;
 
 Texture *Texture::fromFile(const std::string &path) {
     int width, height, nrChannels;
-    uint8_t* data = stbi_load(path.c_str(), &width, &height, &nrChannels, 0);
-    Texture* ret = new Texture(data, width, height, nrChannels);
+    uint8_t *data = stbi_load(path.c_str(), &width, &height, &nrChannels, 0);
+    Texture *ret = new Texture(data, width, height, nrChannels);
     stbi_image_free(data);
     return ret;
 }
@@ -30,7 +32,7 @@ Texture::Texture(uint8_t *data, int width, int height, int channels) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
     GLenum format = GL_RGBA;
-    switch(channels) {
+    switch (channels) {
         case 1:
             format = GL_RED;
             break;
@@ -62,7 +64,7 @@ void Texture::bind(const GLuint slot) {
 }
 
 void Texture::bindToProgram(const GLuint slot, ShaderProgram *program, const std::string &name) {
-    if(program != nullptr) {
+    if (program != nullptr) {
         glActiveTexture(slot);
         glBindTexture(GL_TEXTURE_2D, this->handle);
         program->setUniform1i(name, slot - GL_TEXTURE0);

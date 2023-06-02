@@ -9,11 +9,13 @@
 
 namespace pmlike::world::generator {
 
-    class NoiseGenerator : public ChunkGenerator  {
+    class NoiseGenerator : public ChunkGenerator {
         public:
             NoiseGenerator();
+
             ~NoiseGenerator();
-            void generate(std::shared_ptr<world::Chunk> chunk) final ;
+
+            void generate(std::shared_ptr<world::Chunk> chunk) final;
     };
 
 } // generator

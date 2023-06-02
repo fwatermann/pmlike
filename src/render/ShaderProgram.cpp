@@ -21,17 +21,17 @@ ShaderProgram::ShaderProgram(const ShaderProgram &other) {
 }
 
 ShaderProgram::ShaderProgram(Shader *shader1, Shader *shader2, Shader *shader3) {
-    if(shader3 != nullptr) {
-        Shader* shaders[] = {shader1, shader2, shader3};
+    if (shader3 != nullptr) {
+        Shader *shaders[] = {shader1, shader2, shader3};
         loadShaders(&shaders[0], 3);
     } else {
-        Shader* shaders[] = {shader1, shader2};
+        Shader *shaders[] = {shader1, shader2};
         loadShaders(&shaders[0], 2);
     }
 }
 
 
-ShaderProgram::ShaderProgram(Shader** shaders, std::size_t count) {
+ShaderProgram::ShaderProgram(Shader **shaders, std::size_t count) {
     this->loadShaders(shaders, count);
 }
 
@@ -39,18 +39,18 @@ ShaderProgram::~ShaderProgram() {
     glDeleteProgram(program);
 }
 
-bool ShaderProgram::loadShaders(Shader** shaders, std::size_t count) {
+bool ShaderProgram::loadShaders(Shader **shaders, std::size_t count) {
     this->program = glCreateProgram();
 
     //Compile all shaders
-    for(size_t i = 0; i < count; i ++) {
-        Shader* shader = shaders[i];
+    for (size_t i = 0; i < count; i++) {
+        Shader *shader = shaders[i];
         shader->compile();
     }
 
     //Attach all shaders to program
-    for(uint8_t i = 0; i < count; i++) {
-        Shader* shader = shaders[i];
+    for (uint8_t i = 0; i < count; i++) {
+        Shader *shader = shaders[i];
         glAttachShader(this->program, shader->getHandle());
     }
 
@@ -59,7 +59,7 @@ bool ShaderProgram::loadShaders(Shader** shaders, std::size_t count) {
 
     GLint success;
     glGetProgramiv(this->program, GL_LINK_STATUS, &success);
-    if(success == GL_FALSE) {
+    if (success == GL_FALSE) {
         GLint length = 0;
         glGetProgramiv(this->program, GL_INFO_LOG_LENGTH, &length);
         std::string log(length, ' ');
@@ -71,14 +71,14 @@ bool ShaderProgram::loadShaders(Shader** shaders, std::size_t count) {
     }
 
     //Detach all shaders
-    for(uint8_t i = 0; i < count; i++) {
-        Shader* shader = shaders[i];
+    for (uint8_t i = 0; i < count; i++) {
+        Shader *shader = shaders[i];
         glDetachShader(this->program, shader->getHandle());
     }
 
     //Delete all shaders
-    for(uint8_t i = 0; i < count; i++) {
-        Shader* shader = shaders[i];
+    for (uint8_t i = 0; i < count; i++) {
+        Shader *shader = shaders[i];
         shader->del();
     }
     this->loadUniforms();
@@ -102,13 +102,13 @@ void ShaderProgram::loadUniforms() {
     GLint uniformCount;
     glGetProgramiv(this->program, GL_ACTIVE_UNIFORMS, &uniformCount);
     LOG_DF("Found %d uniforms.", uniformCount);
-    for(int i = 0; i < uniformCount; i ++) {
+    for (int i = 0; i < uniformCount; i++) {
         GLint size;
         GLenum type;
         GLchar name[256];
         glGetActiveUniform(this->program, i, 256, nullptr, &size, &type, name);
         GLint location = glGetUniformLocation(this->program, name);
-        if(location == -1) continue;
+        if (location == -1) continue;
         this->uniforms.insert(std::pair<std::string, GLint>(name, location));
         LOG_DF("Found Uniform '%s'@%d", name, location);
     }
@@ -118,8 +118,8 @@ void ShaderProgram::loadUniforms() {
  * Set the value of a uniform variable in the shader program.
  */
 
-void ShaderProgram::setUniform1i(const std::string& name, int value) {
-    if(this->uniforms.find(name) == this->uniforms.end()) {
+void ShaderProgram::setUniform1i(const std::string &name, int value) {
+    if (this->uniforms.find(name) == this->uniforms.end()) {
         LOG_WF("Uniform '%s' not found!", name.c_str());
         return;
     } else {
@@ -127,8 +127,8 @@ void ShaderProgram::setUniform1i(const std::string& name, int value) {
     }
 }
 
-void ShaderProgram::setUniform1f(const std::string& name, float value) {
-    if(this->uniforms.find(name) == this->uniforms.end()) {
+void ShaderProgram::setUniform1f(const std::string &name, float value) {
+    if (this->uniforms.find(name) == this->uniforms.end()) {
         LOG_WF("Uniform '%s' not found!", name.c_str());
         return;
     } else {
@@ -140,8 +140,8 @@ void ShaderProgram::setUniform1f(const std::string& name, float value) {
  * Set uniform value for a vec2
  */
 
-void ShaderProgram::setUniform2f(const std::string& name, float value1, float value2) {
-    if(this->uniforms.find(name) == this->uniforms.end()) {
+void ShaderProgram::setUniform2f(const std::string &name, float value1, float value2) {
+    if (this->uniforms.find(name) == this->uniforms.end()) {
         LOG_WF("Uniform '%s' not found!", name.c_str());
         return;
     } else {
@@ -149,8 +149,8 @@ void ShaderProgram::setUniform2f(const std::string& name, float value1, float va
     }
 }
 
-void ShaderProgram::setUniform2i(const std::string& name, int value1, int value2) {
-    if(this->uniforms.find(name) == this->uniforms.end()) {
+void ShaderProgram::setUniform2i(const std::string &name, int value1, int value2) {
+    if (this->uniforms.find(name) == this->uniforms.end()) {
         LOG_WF("Uniform '%s' not found!", name.c_str());
         return;
     } else {
@@ -158,8 +158,8 @@ void ShaderProgram::setUniform2i(const std::string& name, int value1, int value2
     }
 }
 
-void ShaderProgram::setUniform2(const std::string& name, glm::vec2 value) {
-    if(this->uniforms.find(name) == this->uniforms.end()) {
+void ShaderProgram::setUniform2(const std::string &name, glm::vec2 value) {
+    if (this->uniforms.find(name) == this->uniforms.end()) {
         LOG_WF("Uniform '%s' not found!", name.c_str());
         return;
     } else {
@@ -171,7 +171,7 @@ void ShaderProgram::setUniform2(const std::string& name, glm::vec2 value) {
  * Set uniform value for a vec3
  */
 
-void ShaderProgram::setUniform3f(const std::string& name, float value1, float value2, float value3) {
+void ShaderProgram::setUniform3f(const std::string &name, float value1, float value2, float value3) {
     if (this->uniforms.find(name) == this->uniforms.end()) {
         LOG_WF("Uniform '%s' not found!", name.c_str());
         return;
@@ -180,7 +180,7 @@ void ShaderProgram::setUniform3f(const std::string& name, float value1, float va
     }
 }
 
-void ShaderProgram::setUniform3i(const std::string& name, int value1, int value2, int value3) {
+void ShaderProgram::setUniform3i(const std::string &name, int value1, int value2, int value3) {
     if (this->uniforms.find(name) == this->uniforms.end()) {
         LOG_WF("Uniform '%s' not found!", name.c_str());
         return;
@@ -189,7 +189,7 @@ void ShaderProgram::setUniform3i(const std::string& name, int value1, int value2
     }
 }
 
-void ShaderProgram::setUniform3(const std::string& name, glm::vec3 value) {
+void ShaderProgram::setUniform3(const std::string &name, glm::vec3 value) {
     if (this->uniforms.find(name) == this->uniforms.end()) {
         LOG_WF("Uniform '%s' not found!", name.c_str());
         return;
@@ -202,7 +202,7 @@ void ShaderProgram::setUniform3(const std::string& name, glm::vec3 value) {
  * Set uniform value for a vec4
  */
 
-void ShaderProgram::setUniform4f(const std::string& name, float value1, float value2, float value3, float value4) {
+void ShaderProgram::setUniform4f(const std::string &name, float value1, float value2, float value3, float value4) {
     if (this->uniforms.find(name) == this->uniforms.end()) {
         LOG_WF("Uniform '%s' not found!", name.c_str());
         return;
@@ -211,7 +211,7 @@ void ShaderProgram::setUniform4f(const std::string& name, float value1, float va
     }
 }
 
-void ShaderProgram::setUniform4i(const std::string& name, int value1, int value2, int value3, int value4) {
+void ShaderProgram::setUniform4i(const std::string &name, int value1, int value2, int value3, int value4) {
     if (this->uniforms.find(name) == this->uniforms.end()) {
         LOG_WF("Uniform '%s' not found!", name.c_str());
         return;
@@ -220,7 +220,7 @@ void ShaderProgram::setUniform4i(const std::string& name, int value1, int value2
     }
 }
 
-void ShaderProgram::setUniform4(const std::string& name, glm::vec4 value) {
+void ShaderProgram::setUniform4(const std::string &name, glm::vec4 value) {
     if (this->uniforms.find(name) == this->uniforms.end()) {
         LOG_WF("Uniform '%s' not found!", name.c_str());
         return;
@@ -233,7 +233,7 @@ void ShaderProgram::setUniform4(const std::string& name, glm::vec4 value) {
  * Set uniform value for various matrices
  */
 
-void ShaderProgram::setUniformMat2(const std::string& name, glm::mat2 value) {
+void ShaderProgram::setUniformMat2(const std::string &name, glm::mat2 value) {
     if (this->uniforms.find(name) == this->uniforms.end()) {
         LOG_WF("Uniform '%s' not found!", name.c_str());
         return;
@@ -242,7 +242,7 @@ void ShaderProgram::setUniformMat2(const std::string& name, glm::mat2 value) {
     }
 }
 
-void ShaderProgram::setUniformMat3(const std::string& name, glm::mat3 value) {
+void ShaderProgram::setUniformMat3(const std::string &name, glm::mat3 value) {
     if (this->uniforms.find(name) == this->uniforms.end()) {
         LOG_WF("Uniform '%s' not found!", name.c_str());
         return;
@@ -251,7 +251,7 @@ void ShaderProgram::setUniformMat3(const std::string& name, glm::mat3 value) {
     }
 }
 
-void ShaderProgram::setUniformMat4(const std::string& name, glm::mat4 value) {
+void ShaderProgram::setUniformMat4(const std::string &name, glm::mat4 value) {
     if (this->uniforms.find(name) == this->uniforms.end()) {
         LOG_WF("Uniform '%s' not found!", name.c_str());
         return;

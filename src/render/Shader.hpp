@@ -15,12 +15,17 @@ namespace pmlike::render {
             bool compiled = false;
             std::string source;
 
-            Shader(const std::string& source, GLenum type, bool isFile = false);
-            Shader(const Shader& other); // copy constructor
+            Shader(const std::string &source, GLenum type, bool isFile = false);
+
+            Shader(const Shader &other); // copy constructor
             ~Shader();
+
             bool compile();
+
             GLuint getHandle() const;
+
             void del();
+
         private:
             GLuint shader;
             GLenum type;

@@ -47,11 +47,13 @@ namespace pmlike::world {
             std::thread threadChunkLoad;
             std::thread threadChunkGenerate;
 
-            static void loadChunk(World* world, glm::ivec3 chunkCoordinates);
+            static void loadChunk(World *world, glm::ivec3 chunkCoordinates);
 
             static void chunkWorkerLoad(World *world);
-            static void chunkWorkerGenerate(World* world);
-            static void queueChunkGeneration(World* world, glm::ivec3 chunkCoordinates);
+
+            static void chunkWorkerGenerate(World *world);
+
+            static void queueChunkGeneration(World *world, glm::ivec3 chunkCoordinates);
     };
 
 }

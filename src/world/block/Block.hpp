@@ -20,9 +20,11 @@ namespace pmlike::world::block {
             BlockMaterial material;
 
             Block(BlockMaterial material, glm::ivec3 worldCoordinates, glm::ivec3 chunkCoordinates);
+
             ~Block();
 
             glm::ivec3 getWorldCoordinate();
+
             glm::ivec3 getChunkCoordinate();
 
             bool isTransparent();

@@ -14,13 +14,13 @@ namespace pmlike::world::generator {
 
         public:
             TestGenerator();
+
             ~TestGenerator();
+
             void generate(std::shared_ptr<world::Chunk> chunk) override;
     };
 
 }
-
-
 
 
 #endif //PM_LIKE_TESTGENERATOR_HPP
