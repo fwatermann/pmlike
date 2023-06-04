@@ -4,6 +4,7 @@
 
 #include "NoiseGenerator.hpp"
 #include "glm/gtc/noise.hpp"
+#include "util/Log.hpp"
 
 using namespace pmlike::world::generator;
 
@@ -16,7 +17,6 @@ NoiseGenerator::~NoiseGenerator() {
 }
 
 void NoiseGenerator::generate(std::shared_ptr<world::Chunk> chunk) {
-
     glm::ivec3 chunkCoords = chunk->getChunkCoordinates();
     glm::ivec3 worldCoords = chunkCoords * glm::ivec3(CHUNK_SIZE_X, CHUNK_SIZE_Y, CHUNK_SIZE_Z);
 

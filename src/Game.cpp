@@ -2,19 +2,24 @@
 // Created by finnw on 30.05.2023.
 //
 
+#include "glm/gtx/string_cast.hpp"
 #include "Game.hpp"
-#include "util/Log.hpp"
-#include "world/generator/NoiseGenerator.hpp"
+#include "./util/Log.hpp"
+#include "./world/generator/NoiseGenerator.hpp"
+#include "util/SystemResources.hpp"
+#include "util/LaunchParameter.hpp"
 
 using namespace pmlike;
 
 Game::Game(GLFWwindow *window) : window(window) {
-    world::ChunkGenerator *generator = new world::generator::NoiseGenerator();
-    this->world = new world::World(generator);
-    this->camera = new render::Camera();
+    std::shared_ptr<world::generator::NoiseGenerator> generator = std::make_shared<world::generator::NoiseGenerator>();
+    this->camera = std::make_shared<render::Camera>();
     this->camera->setPosition(glm::vec3(0, 64, 0));
+    this->debug = pmlike::util::LaunchParameter::debug;
 
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
+    util::os::initCPU();
 }
 
 Game::~Game() = default;
@@ -24,38 +29,20 @@ void Game::render(float deltaTime) {
     if (first) {
         glEnable(GL_DEPTH_TEST);
         first = false;
+        world::World::getInstance()->setGenerator(std::make_shared<world::generator::NoiseGenerator>());
+        world::World::getInstance()->start();
     }
 
-    if (this->font == nullptr) {
-        this->font = new render::Font("./assets/fonts/arial.fnt", true);
+    if (this->debugFont == nullptr) {
+        this->debugFont = new render::Font("./assets/fonts/arial.fnt", false);
     }
 
     this->camera->update();
-    world->render(this->camera, deltaTime);
+    world::World::getInstance()->render(this->camera, deltaTime);
 
     //HUD
     glClear(GL_DEPTH_BUFFER_BIT);
-    int width, height;
-    int fps = (int) std::floor((1.0 / deltaTime));
-    glfwGetWindowSize(this->window, &width, &height);
-    this->font->updateDisplaySize(width, height);
-    std::string posString =
-            "Pos: " + std::to_string(this->camera->position.x) + ", " + std::to_string(this->camera->position.y) +
-            ", " + std::to_string(this->camera->position.z);
-    std::string dirString =
-            "Yaw: " + std::to_string(this->camera->getYaw()) + ", Pitch: " + std::to_string(this->camera->getPitch());
-    std::string fpsString = "FPS: " + std::to_string(fps) + " FrameTime: " + std::to_string(deltaTime * 1000) + "ms";
-    std::string render = "Render: D:" + std::to_string(this->world->renderDistance) + " C:" +
-                         std::to_string(this->world->renderedChunks);
-
-    this->font->renderText(fpsString.c_str(), 5, 05, 20, 0, glm::ortho(0.0f, (float) width, (float) height, 0.0f),
-                           glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
-    this->font->renderText(posString.c_str(), 5, 30, 20, 0, glm::ortho(0.0f, (float) width, (float) height, 0.0f),
-                           glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
-    this->font->renderText(dirString.c_str(), 5, 55, 20, 0, glm::ortho(0.0f, (float) width, (float) height, 0.0f),
-                           glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
-    this->font->renderText(render.c_str(), 5, 80, 20, 0, glm::ortho(0.0f, (float) width, (float) height, 0.0f),
-                           glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+    this->renderDebugTexts(deltaTime);
 
     //Controls
 
@@ -107,6 +94,10 @@ void Game::keyboardInput(int key, int scancode, int action, int mods) {
             glfwSetWindowMonitor(this->window, nullptr, 0, 0, mode->width, mode->height, mode->refreshRate);
         }
     }
+    if(key == GLFW_KEY_F3) {
+        if(action != GLFW_PRESS) return;
+        debug = !debug;
+    }
 }
 
 void Game::mouseMove(double xpos, double ypos) {
@@ -137,4 +128,48 @@ void Game::resize(int width, int height) {
 
 GLFWwindow *Game::getWindow() {
     return this->window;
+}
+
+void Game::renderDebugTexts(float deltaTime) {
+    if(this->debugFont == nullptr) return;
+
+    int width, height;
+    int fps = (int) std::floor((1.0 / deltaTime));
+    glfwGetWindowSize(this->window, &width, &height);
+    this->debugFont->updateDisplaySize(width, height);
+    glm::mat4 projection = glm::ortho(0.0f, (float) width, (float) height, 0.0f);
+
+    if(!debug) {
+        this->debugFont->renderText((std::string("PMLike Version ") + GAME_VERSION).c_str(), 5, 05, 20, 0, projection, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+        return;
+    }
+
+    static int totalVirtualMemory = 0;
+    static int totalUsedVirtualMemory = 0;
+    static double cpuUsage = -1;
+    static std::chrono::time_point nextUpdate = std::chrono::system_clock::now();
+
+    if(nextUpdate - std::chrono::system_clock::now() < std::chrono::seconds(0)) {
+        totalVirtualMemory = (int) ((pmlike::util::os::getTotalVirtualMemory() / util::os::MB));
+        totalUsedVirtualMemory = (int) ((pmlike::util::os::getUsedVirtualMemoryOfCurrentProcess() /  util::os::MB));
+        cpuUsage = pmlike::util::os::getCPUUsageOfCurrentProcess();
+        nextUpdate = std::chrono::system_clock::now() + std::chrono::milliseconds (500);
+    }
+
+    std::string posString = "Pos: " + std::to_string(this->camera->position.x) + ", " + std::to_string(this->camera->position.y) + ", " + std::to_string(this->camera->position.z);
+    std::string dirString = "Yaw: " + std::to_string(this->camera->getYaw()) + ", Pitch: " + std::to_string(this->camera->getPitch());
+    std::string fpsString = "FPS: " + std::to_string(fps) + " FrameTime: " + std::to_string(deltaTime * 1000) + "ms";
+    std::string render = "Render: D:" + glm::to_string(world::World::getInstance()->getLoadDistance()) + " C:" + std::to_string(world::World::getInstance()->renderedChunks);
+    std::string chunks = "Chunks: Q: " + std::to_string(world::World::getInstance()->getNumberOfQueuedChunks()) + " L: " + std::to_string(world::World::getInstance()->getNumberOfLoadedChunks());
+    std::string systemMem = "Memory: " + std::to_string(totalUsedVirtualMemory) + "/" + std::to_string(totalVirtualMemory) + "MB";
+    std::string systemCpu = "CPU: " + std::to_string(cpuUsage) + "%";
+
+
+    this->debugFont->renderText(fpsString.c_str(), 5, 05, 20, 0, projection, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+    this->debugFont->renderText(posString.c_str(), 5, 30, 20, 0, projection, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+    this->debugFont->renderText(dirString.c_str(), 5, 55, 20, 0, projection, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+    this->debugFont->renderText(render.c_str(), 5, 80, 20, 0, projection, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+    this->debugFont->renderText(chunks.c_str(), 5, 105, 20, 0, projection, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+    this->debugFont->renderText(systemMem.c_str(), width - 5, 5, 20, 0, projection, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), pmlike::render::Alignment::END, pmlike::render::Alignment::BEGIN);
+    this->debugFont->renderText(systemCpu.c_str(), width - 5, 30, 20, 0, projection, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), pmlike::render::Alignment::END, pmlike::render::Alignment::BEGIN);
 }

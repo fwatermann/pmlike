@@ -8,6 +8,8 @@
 #include <cstdint>
 #include <iostream>
 #include <string>
+#include <thread>
+#include <sstream>
 
 #define LOG_EF(format, ...) pmlike::util::log::err(__FILE__, __LINE__, format, __VA_ARGS__)
 #define LOG_E(message) pmlike::util::log::err(__FILE__, __LINE__, message)
@@ -32,7 +34,9 @@ namespace pmlike::util::log {
                          Targs ... args) {
         std::string fname = std::string(fileName);
         fname = fname.substr(fname.find_last_of('/') + 1);
-        std::string prefix = std::string("[" + fname + ":" + std::to_string(lineNr) + "/" + std::string(level) + "]");
+        std::stringstream threadId;
+        threadId << std::this_thread::get_id();
+        std::string prefix = std::string("[" + fname + ":" + std::to_string(lineNr) + "@" + threadId.str() + "/" + std::string(level) + "]");
         if (prefix.length() > longestPrefix) longestPrefix = prefix.length();
         std::string fout = std::string("%" + std::to_string(longestPrefix) + "s ") + format + "\n";
 #ifdef DEBUG

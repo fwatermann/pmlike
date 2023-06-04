@@ -13,9 +13,9 @@
 #include "../render/ShaderProgram.hpp"
 #include "glad/glad.h"
 
-#define CHUNK_SIZE_X 32
-#define CHUNK_SIZE_Y 256
-#define CHUNK_SIZE_Z 32
+#define CHUNK_SIZE_X 16
+#define CHUNK_SIZE_Y 16
+#define CHUNK_SIZE_Z 16
 
 namespace pmlike::world {
 
@@ -39,8 +39,9 @@ namespace pmlike::world {
             glm::ivec3 getChunkCoordinates();
 
             bool generated = false;
+            bool generationQueued = false;
 
-            void render(render::Camera *camera, double deltaTime);
+            void render(std::shared_ptr<render::Camera> &camera, double deltaTime);
 
             void updateMesh();
 

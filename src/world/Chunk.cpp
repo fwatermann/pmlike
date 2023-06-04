@@ -6,6 +6,7 @@
 #include <cstring>
 #include "Chunk.hpp"
 #include "glm/gtc/matrix_transform.hpp"
+#include "util/Log.hpp"
 
 using namespace pmlike::world;
 
@@ -38,7 +39,7 @@ glm::ivec3 Chunk::getChunkCoordinates() {
     return {(this->coordinate)};
 }
 
-void Chunk::render(pmlike::render::Camera *camera, double deltaTime) {
+void Chunk::render(std::shared_ptr<render::Camera> &camera, double deltaTime) {
     if (shaderProgram == nullptr) {
         Chunk::initShaderProgram();
     }
@@ -105,57 +106,57 @@ void Chunk::updateMesh() {
 
                 //x+
                 if ((visibleFaces & BLOCK_X_POS) == BLOCK_X_POS) {
-                    indices.push_back(currentIndex + 3);
+                    indices.push_back(currentIndex + 6);
                     indices.push_back(currentIndex + 2);
-                    indices.push_back(currentIndex + 6);
-                    indices.push_back(currentIndex + 6);
-                    indices.push_back(currentIndex + 7);
                     indices.push_back(currentIndex + 3);
+                    indices.push_back(currentIndex + 3);
+                    indices.push_back(currentIndex + 7);
+                    indices.push_back(currentIndex + 6);
                 }
                 //x-
                 if ((visibleFaces & BLOCK_X_NEG) == BLOCK_X_NEG) {
-                    indices.push_back(currentIndex + 0);
+                    indices.push_back(currentIndex + 5);
                     indices.push_back(currentIndex + 4);
-                    indices.push_back(currentIndex + 5);
-                    indices.push_back(currentIndex + 5);
-                    indices.push_back(currentIndex + 1);
                     indices.push_back(currentIndex + 0);
+                    indices.push_back(currentIndex + 0);
+                    indices.push_back(currentIndex + 1);
+                    indices.push_back(currentIndex + 5);
                 }
                 //y+
                 if ((visibleFaces & BLOCK_Y_POS) == BLOCK_Y_POS) {
-                    indices.push_back(currentIndex + 4);
+                    indices.push_back(currentIndex + 6);
                     indices.push_back(currentIndex + 7);
-                    indices.push_back(currentIndex + 6);
-                    indices.push_back(currentIndex + 6);
-                    indices.push_back(currentIndex + 5);
                     indices.push_back(currentIndex + 4);
+                    indices.push_back(currentIndex + 4);
+                    indices.push_back(currentIndex + 5);
+                    indices.push_back(currentIndex + 6);
                 }
                 //y-
                 if ((visibleFaces & BLOCK_Y_NEG) == BLOCK_Y_NEG) {
-                    indices.push_back(currentIndex + 0);
+                    indices.push_back(currentIndex + 2);
                     indices.push_back(currentIndex + 1);
-                    indices.push_back(currentIndex + 2);
-                    indices.push_back(currentIndex + 2);
-                    indices.push_back(currentIndex + 3);
                     indices.push_back(currentIndex + 0);
+                    indices.push_back(currentIndex + 0);
+                    indices.push_back(currentIndex + 3);
+                    indices.push_back(currentIndex + 2);
                 }
                 //z+
                 if ((visibleFaces & BLOCK_Z_POS) == BLOCK_Z_POS) {
-                    indices.push_back(currentIndex + 1);
+                    indices.push_back(currentIndex + 6);
                     indices.push_back(currentIndex + 5);
-                    indices.push_back(currentIndex + 6);
-                    indices.push_back(currentIndex + 6);
-                    indices.push_back(currentIndex + 2);
                     indices.push_back(currentIndex + 1);
+                    indices.push_back(currentIndex + 1);
+                    indices.push_back(currentIndex + 2);
+                    indices.push_back(currentIndex + 6);
                 }
                 //z-
                 if ((visibleFaces & BLOCK_Z_NEG) == BLOCK_Z_NEG) {
-                    indices.push_back(currentIndex + 0);
+                    indices.push_back(currentIndex + 7);
                     indices.push_back(currentIndex + 3);
-                    indices.push_back(currentIndex + 7);
-                    indices.push_back(currentIndex + 7);
-                    indices.push_back(currentIndex + 4);
                     indices.push_back(currentIndex + 0);
+                    indices.push_back(currentIndex + 0);
+                    indices.push_back(currentIndex + 4);
+                    indices.push_back(currentIndex + 7);
                 }
 
                 currentIndex += 8;
@@ -193,8 +194,11 @@ void Chunk::copyToGPU() {
 
     this->vertices.clear();
     this->indices.clear();
+    this->vertices.shrink_to_fit();
+    this->indices.shrink_to_fit();
     this->dirty = false;
     this->glDataMutex.unlock();
+    LOG_DF("Copied Chunk (%d %d %d) to GPU", this->coordinate.x, this->coordinate.y, this->coordinate.z);
 }
 
 void Chunk::initShaderProgram() {
