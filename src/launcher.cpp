@@ -2,6 +2,7 @@
 #include "GLFW/glfw3.h"
 #include "glad/glad.h"
 #include "Game.hpp"
+#include "./util/LaunchParameter.hpp"
 
 void renderLoop();
 
@@ -20,7 +21,8 @@ void resize(GLFWwindow *window, int width, int height);
 GLFWwindow *window;
 pmlike::Game *game;
 
-int main() {
+int main(int argc, char** argv) {
+    pmlike::util::LaunchParameter::parse(argc, argv);
     setup();
     renderLoop();
     cleanup();

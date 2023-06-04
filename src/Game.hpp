@@ -9,6 +9,8 @@
 #include "world/World.hpp"
 #include "render/Font.hpp"
 
+#define GAME_VERSION "0.1"
+
 namespace pmlike {
 
     class Game {
@@ -31,11 +33,13 @@ namespace pmlike {
             GLFWwindow *getWindow();
 
         private:
-            pmlike::world::World *world;
-            pmlike::render::Camera *camera;
+            bool debug = false;
+            std::shared_ptr<render::Camera> camera;
 
             GLFWwindow *window;
-            pmlike::render::Font *font = nullptr;
+            pmlike::render::Font *debugFont = nullptr;
+
+            void renderDebugTexts(float deltaTime);
 
     };
 
