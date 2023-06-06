@@ -8,6 +8,8 @@
 #include "./world/generator/NoiseGenerator.hpp"
 #include "util/SystemResources.hpp"
 #include "util/LaunchParameter.hpp"
+#include <deque>
+#include <numeric>
 
 using namespace pmlike;
 
@@ -133,8 +135,18 @@ GLFWwindow *Game::getWindow() {
 void Game::renderDebugTexts(float deltaTime) {
     if(this->debugFont == nullptr) return;
 
+    // Smooth FPS
+    int rawFPS = (int) std::floor((1.0 / deltaTime));
+    static int lastFPS = -1;
+    static float lastFrameTime = 0.0f;
+    if (lastFPS == -1) {
+        rawFPS = 60;
+    }
+    static std::deque<std::pair<int, float>> fpsTimingHistory;
+    fpsTimingHistory.push_back(std::make_pair(rawFPS, deltaTime * 1000));
+
     int width, height;
-    int fps = (int) std::floor((1.0 / deltaTime));
+
     glfwGetWindowSize(this->window, &width, &height);
     this->debugFont->updateDisplaySize(width, height);
     glm::mat4 projection = glm::ortho(0.0f, (float) width, (float) height, 0.0f);
@@ -153,12 +165,23 @@ void Game::renderDebugTexts(float deltaTime) {
         totalVirtualMemory = (int) ((pmlike::util::os::getTotalVirtualMemory() / util::os::MB));
         totalUsedVirtualMemory = (int) ((pmlike::util::os::getUsedVirtualMemoryOfCurrentProcess() /  util::os::MB));
         cpuUsage = pmlike::util::os::getCPUUsageOfCurrentProcess();
-        nextUpdate = std::chrono::system_clock::now() + std::chrono::milliseconds (500);
+        nextUpdate = std::chrono::system_clock::now() + std::chrono::milliseconds(500);
+        
+        // calcs the average fps and frame time
+        int fpsSum = 0;
+        float frameTimeSum = 0.0f;
+        for(auto &pair : fpsTimingHistory) {
+            fpsSum += pair.first;
+            frameTimeSum += pair.second;
+        }
+        lastFPS = (int) std::floor(fpsSum / fpsTimingHistory.size());
+        lastFrameTime = frameTimeSum / fpsTimingHistory.size();
+        fpsTimingHistory.clear();
     }
 
     std::string posString = "Pos: " + std::to_string(this->camera->position.x) + ", " + std::to_string(this->camera->position.y) + ", " + std::to_string(this->camera->position.z);
     std::string dirString = "Yaw: " + std::to_string(this->camera->getYaw()) + ", Pitch: " + std::to_string(this->camera->getPitch());
-    std::string fpsString = "FPS: " + std::to_string(fps) + " FrameTime: " + std::to_string(deltaTime * 1000) + "ms";
+    std::string fpsString = "FPS: " + std::to_string(lastFPS) + " FrameTime: " + std::to_string(lastFrameTime) + "ms";
     std::string render = "Render: D:" + glm::to_string(world::World::getInstance()->getLoadDistance()) + " C:" + std::to_string(world::World::getInstance()->renderedChunks);
     std::string chunks = "Chunks: Q: " + std::to_string(world::World::getInstance()->getNumberOfQueuedChunks()) + " L: " + std::to_string(world::World::getInstance()->getNumberOfLoadedChunks());
     std::string systemMem = "Memory: " + std::to_string(totalUsedVirtualMemory) + "/" + std::to_string(totalVirtualMemory) + "MB";
