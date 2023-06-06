@@ -8,7 +8,7 @@
 #include "./world/generator/NoiseGenerator.hpp"
 #include "util/SystemResources.hpp"
 #include "util/LaunchParameter.hpp"
-#include <deque>
+#include <vector>
 
 using namespace pmlike;
 
@@ -142,7 +142,7 @@ void Game::renderDebugTexts(float deltaTime) {
         // sets first value to refresh rate
         rawFPS = glfwGetVideoMode(glfwGetPrimaryMonitor())->refreshRate;
     }
-    static std::deque<std::pair<int, float>> fpsTimingHistory;
+    static std::vector<std::pair<int, float>> fpsTimingHistory;
     fpsTimingHistory.push_back(std::make_pair(rawFPS, deltaTime * 1000));
 
     int width, height;
