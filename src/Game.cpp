@@ -9,7 +9,6 @@
 #include "util/SystemResources.hpp"
 #include "util/LaunchParameter.hpp"
 #include <deque>
-#include <numeric>
 
 using namespace pmlike;
 
