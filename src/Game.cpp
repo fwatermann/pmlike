@@ -140,7 +140,8 @@ void Game::renderDebugTexts(float deltaTime) {
     static int lastFPS = -1;
     static float lastFrameTime = 0.0f;
     if (lastFPS == -1) {
-        rawFPS = 60;
+        // sets first value to refresh rate
+        rawFPS = glfwGetVideoMode(glfwGetPrimaryMonitor())->refreshRate;
     }
     static std::deque<std::pair<int, float>> fpsTimingHistory;
     fpsTimingHistory.push_back(std::make_pair(rawFPS, deltaTime * 1000));
