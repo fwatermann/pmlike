@@ -36,5 +36,6 @@ void TestGenerator::generate(std::shared_ptr<world::Chunk> chunk) {
             }
         }
     }
-
+    chunk->generated = true;
+    chunk->updateMesh();
 }

@@ -13,8 +13,8 @@ using namespace pmlike::world;
 pmlike::render::ShaderProgram *Chunk::shaderProgram = nullptr;
 
 Chunk::Chunk(glm::ivec3 chunkCoordinates) : coordinate(chunkCoordinates) {
-    this->transform = glm::translate(glm::mat4(1.0f),
-                                     glm::vec3(chunkCoordinates.x * CHUNK_SIZE_X, chunkCoordinates.y * CHUNK_SIZE_Y,
+    this->chunkTransform = glm::translate(glm::mat4(1.0f),
+                                          glm::vec3(chunkCoordinates.x * CHUNK_SIZE_X, chunkCoordinates.y * CHUNK_SIZE_Y,
                                                chunkCoordinates.z * CHUNK_SIZE_Z));
     this->minP = glm::vec3(chunkCoordinates.x * CHUNK_SIZE_X, chunkCoordinates.y * CHUNK_SIZE_Y,
                            chunkCoordinates.z * CHUNK_SIZE_Z);
@@ -30,9 +30,8 @@ Chunk::~Chunk() {
             }
         }
     }
-    glDeleteVertexArrays(1, &this->vao);
-    glDeleteBuffers(1, &this->vbo);
-    glDeleteBuffers(1, &this->ebo);
+    glDeleteVertexArrays(1, &this->blockMeshData.vao);
+    glDeleteBuffers(1, &this->blockMeshData.vbo);
 };
 
 glm::ivec3 Chunk::getChunkCoordinates() {
@@ -46,164 +45,175 @@ void Chunk::render(std::shared_ptr<render::Camera> &camera, double deltaTime) {
     if (!this->generated) {
         return;
     }
+    if(this->blockMeshData.vao == 0) {
+        this->initBlockMesh();
+    }
     if (this->dirty) {
         this->copyToGPU();
     }
+    if(this->numberVisibleBlocks <= 0) return;
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     shaderProgram->use();
     shaderProgram->setUniformMat4("projection", camera->projectionMatrix);
     shaderProgram->setUniformMat4("view", camera->viewMatrix);
-    shaderProgram->setUniformMat4("model", this->transform);
+    shaderProgram->setUniformMat4("model", this->chunkTransform);
 
-    glBindVertexArray(this->vao);
-    glDrawElements(GL_TRIANGLES, this->indexCount, GL_UNSIGNED_INT, nullptr);
+    glBindVertexArray(this->blockMeshData.vao);
+    glDrawArraysInstanced(GL_TRIANGLES, 0, 36, CHUNK_SIZE_X * CHUNK_SIZE_Y * CHUNK_SIZE_Z);
     glBindVertexArray(0);
 
     shaderProgram->unuse();
 }
 
 void Chunk::updateMesh() {
-    this->glDataMutex.lock();
-    this->vertices.clear();
-    this->indices.clear();
+    //Size of Instance Data in Bytes = 21 bytes (3 floats for position, 2 floats for texture coordinates, 1 byte for visible faces mask)
+    this->instanceDataMutex.lock();
+    if(this->instanceData != nullptr) {
+        std::free(this->instanceData);
+    }
+    this->instanceData = (uint8_t*) std::calloc(CHUNK_SIZE_X * CHUNK_SIZE_Y * CHUNK_SIZE_Z, 21);
 
-    GLuint currentIndex = 0;
+    for(int x = 0; x < CHUNK_SIZE_X; x++) {
+        for(int y = 0; y < CHUNK_SIZE_Y; y++) {
+            for(int z = 0; z < CHUNK_SIZE_Z; z++) {
+                if(this->blocks[x][y][z] != nullptr) {
+                    block::Block* block = this->blocks[x][y][z];
+                    if(block->material == block::BlockMaterial::AIR) continue;
 
-    for (int x = 0; x < CHUNK_SIZE_X; x++) {
-        for (int y = 0; y < CHUNK_SIZE_Y; y++) {
-            for (int z = 0; z < CHUNK_SIZE_Z; z++) {
-                world::block::Block *block = this->blocks[x][y][z];
-                if (block == nullptr || block->material == block::AIR) {
-                    continue;
-                }
+                    uint8_t visibleFacesMask = getVisibleSides(block);
+                    if(visibleFacesMask == 0) continue;
 
-                vertices.push_back(x);
-                vertices.push_back(y);
-                vertices.push_back(z); //- - - 0
-                vertices.push_back(x);
-                vertices.push_back(y);
-                vertices.push_back(z + 1); //- - + 1
-                vertices.push_back(x + 1);
-                vertices.push_back(y);
-                vertices.push_back(z + 1); //+ - + 2
-                vertices.push_back(x + 1);
-                vertices.push_back(y);
-                vertices.push_back(z); //+ - - 3
-                vertices.push_back(x);
-                vertices.push_back(y + 1);
-                vertices.push_back(z); //- + - 4
-                vertices.push_back(x);
-                vertices.push_back(y + 1);
-                vertices.push_back(z + 1); //- + + 5
-                vertices.push_back(x + 1);
-                vertices.push_back(y + 1);
-                vertices.push_back(z + 1); //+ + + 6
-                vertices.push_back(x + 1);
-                vertices.push_back(y + 1);
-                vertices.push_back(z); //+ + - 7
+                    //Position
+                    glm::ivec3 pos = glm::ivec3 {x, y, z};
+                    std::memcpy(this->instanceData + (this->numberVisibleBlocks * 21), &pos, 12);
 
-                uint8_t visibleFaces = getVisibleSides(block);
+                    //Texture Coordinates
+                    glm::vec2 texCoords = glm::ivec2(0, 0); //TODO: Replace with atlas texture coordinates
+                    std::memcpy(this->instanceData + (this->numberVisibleBlocks * 21) + 12, &texCoords, 8);
 
-                //x+
-                if ((visibleFaces & BLOCK_X_POS) == BLOCK_X_POS) {
-                    indices.push_back(currentIndex + 6);
-                    indices.push_back(currentIndex + 2);
-                    indices.push_back(currentIndex + 3);
-                    indices.push_back(currentIndex + 3);
-                    indices.push_back(currentIndex + 7);
-                    indices.push_back(currentIndex + 6);
-                }
-                //x-
-                if ((visibleFaces & BLOCK_X_NEG) == BLOCK_X_NEG) {
-                    indices.push_back(currentIndex + 5);
-                    indices.push_back(currentIndex + 4);
-                    indices.push_back(currentIndex + 0);
-                    indices.push_back(currentIndex + 0);
-                    indices.push_back(currentIndex + 1);
-                    indices.push_back(currentIndex + 5);
-                }
-                //y+
-                if ((visibleFaces & BLOCK_Y_POS) == BLOCK_Y_POS) {
-                    indices.push_back(currentIndex + 6);
-                    indices.push_back(currentIndex + 7);
-                    indices.push_back(currentIndex + 4);
-                    indices.push_back(currentIndex + 4);
-                    indices.push_back(currentIndex + 5);
-                    indices.push_back(currentIndex + 6);
-                }
-                //y-
-                if ((visibleFaces & BLOCK_Y_NEG) == BLOCK_Y_NEG) {
-                    indices.push_back(currentIndex + 2);
-                    indices.push_back(currentIndex + 1);
-                    indices.push_back(currentIndex + 0);
-                    indices.push_back(currentIndex + 0);
-                    indices.push_back(currentIndex + 3);
-                    indices.push_back(currentIndex + 2);
-                }
-                //z+
-                if ((visibleFaces & BLOCK_Z_POS) == BLOCK_Z_POS) {
-                    indices.push_back(currentIndex + 6);
-                    indices.push_back(currentIndex + 5);
-                    indices.push_back(currentIndex + 1);
-                    indices.push_back(currentIndex + 1);
-                    indices.push_back(currentIndex + 2);
-                    indices.push_back(currentIndex + 6);
-                }
-                //z-
-                if ((visibleFaces & BLOCK_Z_NEG) == BLOCK_Z_NEG) {
-                    indices.push_back(currentIndex + 7);
-                    indices.push_back(currentIndex + 3);
-                    indices.push_back(currentIndex + 0);
-                    indices.push_back(currentIndex + 0);
-                    indices.push_back(currentIndex + 4);
-                    indices.push_back(currentIndex + 7);
-                }
+                    //Visible faces mask
+                    std::memcpy(this->instanceData + (this->numberVisibleBlocks * 21) + 20, &visibleFacesMask, 1);
 
-                currentIndex += 8;
+                    this->numberVisibleBlocks ++;
+                }
             }
         }
     }
-    this->dirty = true;
-    this->glDataMutex.unlock();
+
+    if(this->numberVisibleBlocks != 0) {
+        this->dirty = true;
+    } else {
+        std::free(this->instanceData);
+        this->instanceData = nullptr;
+    }
+    this->instanceDataMutex.unlock();
 }
 
 void Chunk::copyToGPU() {
-    this->glDataMutex.lock();
-    this->indexCount = indices.size();
 
-    glDeleteVertexArrays(1, &this->vao);
-    glDeleteBuffers(1, &this->vbo);
-    glDeleteBuffers(1, &this->ebo);
+    if(this->ibo != 0) {
+        glDeleteBuffers(1, &this->ibo);
+    }
 
-    glGenVertexArrays(1, &this->vao);
-    glGenBuffers(1, &this->vbo);
-    glGenBuffers(1, &this->ebo);
+    glGenBuffers(1, &this->ibo);
+    glBindBuffer(GL_ARRAY_BUFFER, this->ibo);
+    this->instanceDataMutex.lock();
+    glBufferData(GL_ARRAY_BUFFER, this->numberVisibleBlocks * 21, this->instanceData, GL_STATIC_DRAW);
+    this->instanceDataMutex.unlock();
 
-    glBindVertexArray(this->vao);
+    glBindVertexArray(this->blockMeshData.vao);
 
-    glBindBuffer(GL_ARRAY_BUFFER, this->vbo);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
+    glEnableVertexAttribArray(Chunk::shaderProgram->getAttribLocation("aBlockPosition"));
+    glVertexAttribPointer(Chunk::shaderProgram->getAttribLocation("aBlockPosition"), 3, GL_FLOAT, GL_FALSE, 21, (void*) 0);
+    glVertexAttribDivisor(Chunk::shaderProgram->getAttribLocation("aBlockPosition"), 1);
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->ebo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(GLuint), indices.data(), GL_STATIC_DRAW);
+    glEnableVertexAttribArray(Chunk::shaderProgram->getAttribLocation("aTextureAtlasCoords"));
+    glVertexAttribPointer(Chunk::shaderProgram->getAttribLocation("aTextureAtlasCoords"), 2, GL_FLOAT, GL_FALSE, 21, (void*) 12);
+    glVertexAttribDivisor(Chunk::shaderProgram->getAttribLocation("aTextureAtlasCoords"), 1);
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (GLvoid *) 0);
-    glEnableVertexAttribArray(shaderProgram->getAttribLocation("aPosition"));
+    glEnableVertexAttribArray(Chunk::shaderProgram->getAttribLocation("aFacesMask"));
+    glVertexAttribPointer(Chunk::shaderProgram->getAttribLocation("aFacesMask"), 1, GL_UNSIGNED_BYTE, GL_FALSE, 21, (void*) 20);
+    glVertexAttribDivisor(Chunk::shaderProgram->getAttribLocation("aFacesMask"), 1);
 
     glBindVertexArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-    this->vertices.clear();
-    this->indices.clear();
-    this->vertices.shrink_to_fit();
-    this->indices.shrink_to_fit();
+    std::free(this->instanceData);
+    this->instanceData = nullptr;
     this->dirty = false;
-    this->glDataMutex.unlock();
-    LOG_DF("Copied Chunk (%d %d %d) to GPU", this->coordinate.x, this->coordinate.y, this->coordinate.z);
+}
+
+void Chunk::initBlockMesh() {
+    blockMeshData = BlockMeshData();
+
+    float vertices[] = { //TODO: Texture Coordinates could be moved to shader due to being the same for every block.
+            //y-
+            0.0f, 0.0f, 0.0f,    0.25f, (2.0f/3.0f),  //0
+            0.0f, 0.0f, 1.0f,    0.25f, 1.0f,  //3
+            1.0f, 0.0f, 1.0f, 0.50f, 1.0f, //2
+            1.0f, 0.0f, 1.0f, 0.50f, 1.0f, //2
+            1.0f, 0.0f, 0.0f, 0.50f, (2.0f/3.0f), //1
+            0.0f, 0.0f, 0.0f, 0.25f, (2.0f/3.0f), //0
+            //y+
+            0.0f, 1.0f, 0.0f, 0.25f, (1.0f/3.0f), //4
+            1.0f, 1.0f, 0.0f, 0.5f, (1.0f/3.0f), //5
+            1.0f, 1.0f, 1.0f, 0.5f, 0.0f, //6
+            1.0f, 1.0f, 1.0f, 0.5f, 0.0f, //6
+            0.0f, 1.0f, 1.0f, 0.25f, 0.0f, //7
+            0.0f, 1.0f, 0.0f, 0.25f, (1.0f/3.0f), //4
+            //x-
+            0.0f, 0.0f, 0.0f, 0.25f, (2.0f/3.0f), //0
+            0.0f, 1.0f, 0.0f, 0.25f, (1.0f/3.0f), //4
+            0.0f, 1.0f, 1.0f, 0.0f, (1.0f/3.0f), //7
+            0.0f, 1.0f, 1.0f, 0.0f, (1.0f/3.0f), //7
+            0.0f, 0.0f, 1.0f, 0.0f, (2.0f/3.0f), //3
+            0.0f, 0.0f, 0.0f, 0.25f, (2.0f/3.0f), //0
+            //x+
+            1.0f, 0.0f, 0.0f, 0.5f, (2.0f/3.0f), //1
+            1.0f, 0.0f, 1.0f, 0.75f, (2.0f/3.0f), //2
+            1.0f, 1.0f, 1.0f, 0.75f, (1.0f/3.0f), //6
+            1.0f, 1.0f, 1.0f, 0.75f, (1.0f/3.0f), //6
+            1.0f, 1.0f, 0.0f, 0.5f, (1.0f/3.0f), //5
+            1.0f, 0.0f, 0.0f, 0.5f, (2.0f/3.0f), //1
+            //z-
+            0.0f, 0.0f, 0.0f, 0.25f, (2.0f/3.0f), //0
+            1.0f, 0.0f, 0.0f, 0.5f, (2.0f/3.0f), //1
+            1.0f, 1.0f, 0.0f, 0.5f, (1.0f/3.0f), //5
+            1.0f, 1.0f, 0.0f, 0.5f, (1.0f/3.0f), //5
+            0.0f, 1.0f, 0.0f, 0.25f, (1.0f/3.0f), //4
+            0.0f, 0.0f, 0.0f, 0.25f, (2.0f/3.0f), //0
+            //z+
+            0.0f, 0.0f, 1.0f, 1.0f, (2.0f/3.0f), //3
+            0.0f, 1.0f, 1.0f, 1.0f, (1.0f/3.0f), //7
+            1.0f, 1.0f, 1.0f, 0.75f, (1.0f/3.0f), //6
+            1.0f, 1.0f, 1.0f, 0.75f, (1.0f/3.0f), //6
+            1.0f, 0.0f, 1.0f, 0.75f, (2.0f/3.0f), //2
+            0.0f, 0.0f, 1.0f, 1.0f, (2.0f/3.0f), //3
+    };
+
+    glGenVertexArrays(1, &blockMeshData.vao);
+    glBindVertexArray(blockMeshData.vao);
+
+    glGenBuffers(1, &blockMeshData.vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, blockMeshData.vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+    glEnableVertexAttribArray(Chunk::shaderProgram->getAttribLocation("aPosition"));
+    glVertexAttribPointer(Chunk::shaderProgram->getAttribLocation("aPosition"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(Chunk::shaderProgram->getAttribLocation("aTexCoord"));
+    glVertexAttribPointer(Chunk::shaderProgram->getAttribLocation("aTexCoord"), 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(sizeof(float) * 3));
+
+    glBindVertexArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+
 }
 
 void Chunk::initShaderProgram() {
-    pmlike::render::Shader vertexShader = pmlike::render::Shader("shader/Simple.vert", GL_VERTEX_SHADER, true);
-    pmlike::render::Shader fragmentShader = pmlike::render::Shader("shader/Simple.frag", GL_FRAGMENT_SHADER, true);
+    pmlike::render::Shader vertexShader = pmlike::render::Shader("shader/Chunk.vert", GL_VERTEX_SHADER, true);
+    pmlike::render::Shader fragmentShader = pmlike::render::Shader("shader/Chunk.frag", GL_FRAGMENT_SHADER, true);
     shaderProgram = new pmlike::render::ShaderProgram(&vertexShader, &fragmentShader);
 }
 

@@ -26,6 +26,10 @@ namespace pmlike::world {
     const uint8_t BLOCK_Z_POS = 0b00010000;
     const uint8_t BLOCK_Z_NEG = 0b00100000;
 
+    struct BlockMeshData {
+        GLuint vao = 0, vbo = 0;
+    };
+
     class Chunk {
         public:
             static pmlike::render::ShaderProgram *shaderProgram;
@@ -42,30 +46,28 @@ namespace pmlike::world {
             bool generationQueued = false;
 
             void render(std::shared_ptr<render::Camera> &camera, double deltaTime);
-
             void updateMesh();
-
             bool isInFrustum(Frustum &frustum);
 
         private:
             static void initShaderProgram();
 
-            bool dirty = true;
+            bool dirty = false;
+
+            BlockMeshData blockMeshData;
 
             glm::ivec3 coordinate;
             glm::vec3 minP, maxP;
 
-            GLuint vao = 0, vbo = 0, ebo = 0;
-            GLsizei indexCount;
+            GLuint ibo;
+            uint8_t* instanceData = nullptr;
+            GLuint numberVisibleBlocks = 0;
+            std::mutex instanceDataMutex;
 
-            std::vector<GLfloat> vertices;
-            std::vector<GLuint> indices;
-
-            std::mutex glDataMutex;
-
-            glm::mat4 transform;
+            glm::mat4 chunkTransform;
 
             void copyToGPU();
+            void initBlockMesh();
 
             /**
              * Returns exposed sides
