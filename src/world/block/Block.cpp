@@ -9,6 +9,8 @@
 
 using namespace pmlike::world::block;
 
+pmlike::render::Texture* Block::texture = nullptr;
+
 Block::Block(BlockMaterial material, glm::ivec3 worldCoordinates, glm::ivec3 chunkCoords) : material(material) {
     this->worldCoordinate = worldCoordinates;
     this->chunkCoordinate = chunkCoords;

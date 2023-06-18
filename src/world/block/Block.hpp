@@ -7,6 +7,7 @@
 
 #include <memory>
 #include "glm/glm.hpp"
+#include "../../render/Texture.hpp"
 
 namespace pmlike::world::block {
 
@@ -17,6 +18,9 @@ namespace pmlike::world::block {
 
     class Block {
         public:
+
+            static render::Texture* texture;
+
             BlockMaterial material;
 
             Block(BlockMaterial material, glm::ivec3 worldCoordinates, glm::ivec3 chunkCoordinates);

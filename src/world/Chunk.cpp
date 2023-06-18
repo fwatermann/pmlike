@@ -7,6 +7,7 @@
 #include "Chunk.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "util/Log.hpp"
+#include "../render/Texture.hpp"
 
 using namespace pmlike::world;
 
@@ -30,8 +31,8 @@ Chunk::~Chunk() {
             }
         }
     }
-    glDeleteVertexArrays(1, &this->blockMeshData.vao);
-    glDeleteBuffers(1, &this->blockMeshData.vbo);
+    glDeleteVertexArrays(1, &this->vao);
+    glDeleteBuffers(1, &this->vbo);
 };
 
 glm::ivec3 Chunk::getChunkCoordinates() {
@@ -45,13 +46,15 @@ void Chunk::render(std::shared_ptr<render::Camera> &camera, double deltaTime) {
     if (!this->generated) {
         return;
     }
-    if(this->blockMeshData.vao == 0) {
-        this->initBlockMesh();
-    }
     if (this->dirty) {
         this->copyToGPU();
     }
     if(this->numberVisibleBlocks <= 0) return;
+
+    //TODO: Replace
+    if(block::Block::texture == nullptr) {
+        block::Block::texture = render::Texture::fromFile("assets/textures/grass_block.png");
+    }
 
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -60,9 +63,11 @@ void Chunk::render(std::shared_ptr<render::Camera> &camera, double deltaTime) {
     shaderProgram->setUniformMat4("projection", camera->projectionMatrix);
     shaderProgram->setUniformMat4("view", camera->viewMatrix);
     shaderProgram->setUniformMat4("model", this->chunkTransform);
+    shaderProgram->setUniform2i("atlasSize", 1, 1);
+    block::Block::texture->bindToProgram(GL_TEXTURE0, shaderProgram, "textureAtlas");
 
-    glBindVertexArray(this->blockMeshData.vao);
-    glDrawArraysInstanced(GL_TRIANGLES, 0, 36, CHUNK_SIZE_X * CHUNK_SIZE_Y * CHUNK_SIZE_Z);
+    glBindVertexArray(this->vao);
+    glDrawArrays(GL_POINTS, 0, this->numberVisibleBlocks);
     glBindVertexArray(0);
 
     shaderProgram->unuse();
@@ -74,7 +79,8 @@ void Chunk::updateMesh() {
     if(this->instanceData != nullptr) {
         std::free(this->instanceData);
     }
-    this->instanceData = (uint8_t*) std::calloc(CHUNK_SIZE_X * CHUNK_SIZE_Y * CHUNK_SIZE_Z, 21);
+    this->instanceData = (uint8_t*) std::calloc(CHUNK_SIZE_X * CHUNK_SIZE_Y * CHUNK_SIZE_Z, 5*sizeof(float) + sizeof(uint8_t));
+    const GLuint stride = 5*sizeof(float) + 1;
 
     for(int x = 0; x < CHUNK_SIZE_X; x++) {
         for(int y = 0; y < CHUNK_SIZE_Y; y++) {
@@ -86,16 +92,11 @@ void Chunk::updateMesh() {
                     uint8_t visibleFacesMask = getVisibleSides(block);
                     if(visibleFacesMask == 0) continue;
 
-                    //Position
                     glm::ivec3 pos = glm::ivec3 {x, y, z};
-                    std::memcpy(this->instanceData + (this->numberVisibleBlocks * 21), &pos, 12);
-
-                    //Texture Coordinates
-                    glm::vec2 texCoords = glm::ivec2(0, 0); //TODO: Replace with atlas texture coordinates
-                    std::memcpy(this->instanceData + (this->numberVisibleBlocks * 21) + 12, &texCoords, 8);
-
-                    //Visible faces mask
-                    std::memcpy(this->instanceData + (this->numberVisibleBlocks * 21) + 20, &visibleFacesMask, 1);
+                    glm::ivec2 textureAtlasCoords = glm::ivec2(0, 0);
+                    std::memcpy(this->instanceData + this->numberVisibleBlocks * stride, &pos, 3 * sizeof(float));
+                    std::memcpy(this->instanceData + this->numberVisibleBlocks * stride + 3*sizeof(float), &textureAtlasCoords, 2 * sizeof(float));
+                    std::memcpy(this->instanceData + this->numberVisibleBlocks * stride + 5*sizeof(float), &visibleFacesMask, sizeof(uint8_t));
 
                     this->numberVisibleBlocks ++;
                 }
@@ -114,29 +115,26 @@ void Chunk::updateMesh() {
 
 void Chunk::copyToGPU() {
 
-    if(this->ibo != 0) {
-        glDeleteBuffers(1, &this->ibo);
+    if(this->vbo == 0) {
+        glGenBuffers(1, &this->vbo);
     }
 
-    glGenBuffers(1, &this->ibo);
-    glBindBuffer(GL_ARRAY_BUFFER, this->ibo);
+    const GLuint stride = 5*sizeof(float) + 1;
+
+    glBindVertexArray(this->vao);
+    glBindBuffer(GL_ARRAY_BUFFER, this->vbo);
     this->instanceDataMutex.lock();
-    glBufferData(GL_ARRAY_BUFFER, this->numberVisibleBlocks * 21, this->instanceData, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, this->numberVisibleBlocks * stride, this->instanceData, GL_STATIC_DRAW);
     this->instanceDataMutex.unlock();
 
-    glBindVertexArray(this->blockMeshData.vao);
+    glEnableVertexAttribArray(Chunk::shaderProgram->getAttribLocation("aPosition"));
+    glVertexAttribPointer(Chunk::shaderProgram->getAttribLocation("aPosition"), 3, GL_FLOAT, GL_FALSE, stride, (void*) 0);
 
-    glEnableVertexAttribArray(Chunk::shaderProgram->getAttribLocation("aBlockPosition"));
-    glVertexAttribPointer(Chunk::shaderProgram->getAttribLocation("aBlockPosition"), 3, GL_FLOAT, GL_FALSE, 21, (void*) 0);
-    glVertexAttribDivisor(Chunk::shaderProgram->getAttribLocation("aBlockPosition"), 1);
-
-    glEnableVertexAttribArray(Chunk::shaderProgram->getAttribLocation("aTextureAtlasCoords"));
-    glVertexAttribPointer(Chunk::shaderProgram->getAttribLocation("aTextureAtlasCoords"), 2, GL_FLOAT, GL_FALSE, 21, (void*) 12);
-    glVertexAttribDivisor(Chunk::shaderProgram->getAttribLocation("aTextureAtlasCoords"), 1);
+    glEnableVertexAttribArray(Chunk::shaderProgram->getAttribLocation("aAtlasCoords"));
+    glVertexAttribPointer(Chunk::shaderProgram->getAttribLocation("aAtlasCoords"), 2, GL_FLOAT, GL_FALSE, stride, (void*) (3*sizeof(float)));
 
     glEnableVertexAttribArray(Chunk::shaderProgram->getAttribLocation("aFacesMask"));
-    glVertexAttribPointer(Chunk::shaderProgram->getAttribLocation("aFacesMask"), 1, GL_UNSIGNED_BYTE, GL_FALSE, 21, (void*) 20);
-    glVertexAttribDivisor(Chunk::shaderProgram->getAttribLocation("aFacesMask"), 1);
+    glVertexAttribPointer(Chunk::shaderProgram->getAttribLocation("aFacesMask"), 1, GL_UNSIGNED_BYTE, GL_FALSE, stride, (void*) (5*sizeof(float)));
 
     glBindVertexArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -144,77 +142,16 @@ void Chunk::copyToGPU() {
     std::free(this->instanceData);
     this->instanceData = nullptr;
     this->dirty = false;
-}
 
-void Chunk::initBlockMesh() {
-    blockMeshData = BlockMeshData();
-
-    float vertices[] = { //TODO: Texture Coordinates could be moved to shader due to being the same for every block.
-            //y-
-            0.0f, 0.0f, 0.0f,    0.25f, (2.0f/3.0f),  //0
-            0.0f, 0.0f, 1.0f,    0.25f, 1.0f,  //3
-            1.0f, 0.0f, 1.0f, 0.50f, 1.0f, //2
-            1.0f, 0.0f, 1.0f, 0.50f, 1.0f, //2
-            1.0f, 0.0f, 0.0f, 0.50f, (2.0f/3.0f), //1
-            0.0f, 0.0f, 0.0f, 0.25f, (2.0f/3.0f), //0
-            //y+
-            0.0f, 1.0f, 0.0f, 0.25f, (1.0f/3.0f), //4
-            1.0f, 1.0f, 0.0f, 0.5f, (1.0f/3.0f), //5
-            1.0f, 1.0f, 1.0f, 0.5f, 0.0f, //6
-            1.0f, 1.0f, 1.0f, 0.5f, 0.0f, //6
-            0.0f, 1.0f, 1.0f, 0.25f, 0.0f, //7
-            0.0f, 1.0f, 0.0f, 0.25f, (1.0f/3.0f), //4
-            //x-
-            0.0f, 0.0f, 0.0f, 0.25f, (2.0f/3.0f), //0
-            0.0f, 1.0f, 0.0f, 0.25f, (1.0f/3.0f), //4
-            0.0f, 1.0f, 1.0f, 0.0f, (1.0f/3.0f), //7
-            0.0f, 1.0f, 1.0f, 0.0f, (1.0f/3.0f), //7
-            0.0f, 0.0f, 1.0f, 0.0f, (2.0f/3.0f), //3
-            0.0f, 0.0f, 0.0f, 0.25f, (2.0f/3.0f), //0
-            //x+
-            1.0f, 0.0f, 0.0f, 0.5f, (2.0f/3.0f), //1
-            1.0f, 0.0f, 1.0f, 0.75f, (2.0f/3.0f), //2
-            1.0f, 1.0f, 1.0f, 0.75f, (1.0f/3.0f), //6
-            1.0f, 1.0f, 1.0f, 0.75f, (1.0f/3.0f), //6
-            1.0f, 1.0f, 0.0f, 0.5f, (1.0f/3.0f), //5
-            1.0f, 0.0f, 0.0f, 0.5f, (2.0f/3.0f), //1
-            //z-
-            0.0f, 0.0f, 0.0f, 0.25f, (2.0f/3.0f), //0
-            1.0f, 0.0f, 0.0f, 0.5f, (2.0f/3.0f), //1
-            1.0f, 1.0f, 0.0f, 0.5f, (1.0f/3.0f), //5
-            1.0f, 1.0f, 0.0f, 0.5f, (1.0f/3.0f), //5
-            0.0f, 1.0f, 0.0f, 0.25f, (1.0f/3.0f), //4
-            0.0f, 0.0f, 0.0f, 0.25f, (2.0f/3.0f), //0
-            //z+
-            0.0f, 0.0f, 1.0f, 1.0f, (2.0f/3.0f), //3
-            0.0f, 1.0f, 1.0f, 1.0f, (1.0f/3.0f), //7
-            1.0f, 1.0f, 1.0f, 0.75f, (1.0f/3.0f), //6
-            1.0f, 1.0f, 1.0f, 0.75f, (1.0f/3.0f), //6
-            1.0f, 0.0f, 1.0f, 0.75f, (2.0f/3.0f), //2
-            0.0f, 0.0f, 1.0f, 1.0f, (2.0f/3.0f), //3
-    };
-
-    glGenVertexArrays(1, &blockMeshData.vao);
-    glBindVertexArray(blockMeshData.vao);
-
-    glGenBuffers(1, &blockMeshData.vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, blockMeshData.vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-    glEnableVertexAttribArray(Chunk::shaderProgram->getAttribLocation("aPosition"));
-    glVertexAttribPointer(Chunk::shaderProgram->getAttribLocation("aPosition"), 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(Chunk::shaderProgram->getAttribLocation("aTexCoord"));
-    glVertexAttribPointer(Chunk::shaderProgram->getAttribLocation("aTexCoord"), 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(sizeof(float) * 3));
-
-    glBindVertexArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    LOG_DF("Copied chunk (%d %d %d) to GPU (%d blocks)", this->coordinate.x, this->coordinate.y, this->coordinate.z, this->numberVisibleBlocks);
 
 }
 
 void Chunk::initShaderProgram() {
-    pmlike::render::Shader vertexShader = pmlike::render::Shader("shader/Chunk.vert", GL_VERTEX_SHADER, true);
-    pmlike::render::Shader fragmentShader = pmlike::render::Shader("shader/Chunk.frag", GL_FRAGMENT_SHADER, true);
-    shaderProgram = new pmlike::render::ShaderProgram(&vertexShader, &fragmentShader);
+    render::Shader vertexShader = pmlike::render::Shader("shader/Chunk.vert", GL_VERTEX_SHADER, true);
+    render::Shader fragmentShader = pmlike::render::Shader("shader/Chunk.frag", GL_FRAGMENT_SHADER, true);
+    render::Shader geometryShader = render::Shader("shader/Chunk.geom", GL_GEOMETRY_SHADER, true);
+    shaderProgram = new render::ShaderProgram(&vertexShader, &fragmentShader, &geometryShader);
 }
 
 uint8_t Chunk::getVisibleSides(block::Block *block) {
