@@ -23,13 +23,6 @@ Chunk::Chunk(glm::ivec3 chunkCoordinates) : coordinate(chunkCoordinates) {
 }
 
 Chunk::~Chunk() {
-    for (int x = 0; x < CHUNK_SIZE_X; x++) {
-        for (int y = 0; y < CHUNK_SIZE_Y; y++) {
-            for (int z = 0; z < CHUNK_SIZE_Z; z++) {
-                delete this->blocks[x][y][z];
-            }
-        }
-    }
     glDeleteVertexArrays(1, &this->vao);
     glDeleteBuffers(1, &this->vbo);
     glDeleteBuffers(1, &this->ebo);
@@ -43,7 +36,7 @@ void Chunk::render(std::shared_ptr<render::Camera> &camera, double deltaTime) {
     if (shaderProgram == nullptr) {
         Chunk::initShaderProgram();
     }
-    if (!this->generated) {
+    if (!this->generated || !this->mustRender) {
         return;
     }
     if (this->dirty) {
@@ -72,8 +65,9 @@ void Chunk::updateMesh() {
     for (int x = 0; x < CHUNK_SIZE_X; x++) {
         for (int y = 0; y < CHUNK_SIZE_Y; y++) {
             for (int z = 0; z < CHUNK_SIZE_Z; z++) {
-                world::block::Block *block = this->blocks[x][y][z];
-                if (block == nullptr || block->material == block::AIR) {
+                material::block::BlockMaterial block = this->blocks[x][y][z];
+                uint8_t visibleFaces = getVisibleSides(glm::ivec3(x, y, z));
+                if (block == material::block::BlockMaterial::AIR || visibleFaces == 0x00) {
                     continue;
                 }
 
@@ -102,7 +96,6 @@ void Chunk::updateMesh() {
                 vertices.push_back(y + 1);
                 vertices.push_back(z); //+ + - 7
 
-                uint8_t visibleFaces = getVisibleSides(block);
 
                 //x+
                 if ((visibleFaces & BLOCK_X_POS) == BLOCK_X_POS) {
@@ -163,6 +156,13 @@ void Chunk::updateMesh() {
             }
         }
     }
+    if(currentIndex == 0) {
+        this->mustRender = false;
+        this->glDataMutex.unlock();
+        return;
+    }
+    this->mustRender = true;
+
     this->dirty = true;
     this->glDataMutex.unlock();
 }
@@ -207,10 +207,10 @@ void Chunk::initShaderProgram() {
     shaderProgram = new pmlike::render::ShaderProgram(&vertexShader, &fragmentShader);
 }
 
-uint8_t Chunk::getVisibleSides(block::Block *block) {
-    const int x = block->getChunkCoordinate().x;
-    const int y = block->getChunkCoordinate().y;
-    const int z = block->getChunkCoordinate().z;
+uint8_t Chunk::getVisibleSides(glm::ivec3 blockChunkCoords) {
+    const int x = blockChunkCoords.x;
+    const int y = blockChunkCoords.y;
+    const int z = blockChunkCoords.z;
 
     uint8_t ret = 0b00000000;
 
@@ -235,22 +235,22 @@ uint8_t Chunk::getVisibleSides(block::Block *block) {
     }
 
     //Block borders
-    if (x > 0 && (this->blocks[x - 1][y][z] == nullptr || this->blocks[x - 1][y][z]->isTransparent())) {
+    if (x > 0 && (material::block::isTransparent(blocks[x - 1][y][z]))) {
         ret |= BLOCK_X_NEG;
     }
-    if (x < CHUNK_SIZE_X - 1 && (this->blocks[x + 1][y][z] == nullptr || this->blocks[x + 1][y][z]->isTransparent())) {
+    if (x < CHUNK_SIZE_X - 1 && (material::block::isTransparent(this->blocks[x + 1][y][z]))) {
         ret |= BLOCK_X_POS;
     }
-    if (y > 0 && (this->blocks[x][y - 1][z] == nullptr || this->blocks[x][y - 1][z]->isTransparent())) {
+    if (y > 0 && (material::block::isTransparent(this->blocks[x][y - 1][z]))) {
         ret |= BLOCK_Y_NEG;
     }
-    if (y < CHUNK_SIZE_Y - 1 && (this->blocks[x][y + 1][z] == nullptr || this->blocks[x][y + 1][z]->isTransparent())) {
+    if (y < CHUNK_SIZE_Y - 1 && (material::block::isTransparent(this->blocks[x][y + 1][z]))) {
         ret |= BLOCK_Y_POS;
     }
-    if (z > 0 && (this->blocks[x][y][z - 1] == nullptr || this->blocks[x][y][z - 1]->isTransparent())) {
+    if (z > 0 && (material::block::isTransparent(this->blocks[x][y][z - 1]))) {
         ret |= BLOCK_Z_NEG;
     }
-    if (z < CHUNK_SIZE_Z - 1 && (this->blocks[x][y][z + 1] == nullptr || this->blocks[x][y][z + 1]->isTransparent())) {
+    if (z < CHUNK_SIZE_Z - 1 && (material::block::isTransparent(this->blocks[x][y][z + 1]))) {
         ret |= BLOCK_Z_POS;
     }
 

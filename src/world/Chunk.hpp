@@ -7,14 +7,15 @@
 
 #include <iostream>
 #include <mutex>
+#include <memory>
 #include "glm/glm.hpp"
-#include "./block/Block.hpp"
 #include "render/camera/Camera.hpp"
-#include "../render/ShaderProgram.hpp"
+#include "render/ShaderProgram.hpp"
+#include "world/material/Material.hpp"
 #include "glad/glad.h"
 
 #define CHUNK_SIZE_X 16
-#define CHUNK_SIZE_Y 16
+#define CHUNK_SIZE_Y 256
 #define CHUNK_SIZE_Z 16
 
 namespace pmlike::world {
@@ -34,12 +35,13 @@ namespace pmlike::world {
 
             ~Chunk();
 
-            world::block::Block *blocks[CHUNK_SIZE_X][CHUNK_SIZE_Y][CHUNK_SIZE_Z];
+            world::material::block::BlockMaterial blocks[CHUNK_SIZE_X][CHUNK_SIZE_Y][CHUNK_SIZE_Z];
 
             glm::ivec3 getChunkCoordinates();
 
             bool generated = false;
             bool generationQueued = false;
+            bool mustRender = false;
 
             void render(std::shared_ptr<render::Camera> &camera, double deltaTime);
 
@@ -72,7 +74,7 @@ namespace pmlike::world {
              * @param block
              * @return bitmask for sides
              */
-            uint8_t getVisibleSides(block::Block *block);
+            uint8_t getVisibleSides(glm::ivec3 blockChunkCoords);
 
     };
 

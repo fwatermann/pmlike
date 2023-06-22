@@ -42,6 +42,7 @@ namespace pmlike::world {
             void start();
             void render(std::shared_ptr<render::Camera> camera, double deltaTime);
             void putChunk(const std::shared_ptr<Chunk>& chunk);
+            void removeChunk(const std::shared_ptr<Chunk>& chunk);
             std::shared_ptr<Chunk> getChunk(glm::ivec3 chunkCoordinates);
 
             void setLoadDistance(glm::ivec3 d);
@@ -66,7 +67,7 @@ namespace pmlike::world {
 
             bool running = false;
             int numberGeneratorThreads = 4;
-            glm::ivec3 loadDistance = {8, 4, 8};
+            glm::ivec3 loadDistance = {16, 8, 16};
 
             std::mutex loadedChunksLock;
             std::vector<std::shared_ptr<Chunk>> loadedChunks;

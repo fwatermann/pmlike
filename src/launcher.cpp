@@ -54,7 +54,7 @@ void setup() {
         exit(EXIT_FAILURE);
     }
 
-    glfwSwapInterval(1);
+    glfwSwapInterval(0);
 
     glfwSetKeyCallback(window, keyboardInput);
     glfwSetMouseButtonCallback(window, mouseInput);

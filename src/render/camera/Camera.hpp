@@ -71,7 +71,7 @@ namespace pmlike::render {
 
             float fov = glm::radians(70.0F);
             float aspectRatio = 16.0F / 9.0F;
-            float nearPlane = 0.0001F;
+            float nearPlane = 0.1F;
             float farPlane = 1000.0F;
 
     };

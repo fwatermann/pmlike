@@ -54,7 +54,7 @@ void World::render(std::shared_ptr<render::Camera> camera, double deltaTime) {
                                    chunk->getChunkCoordinates().y * CHUNK_SIZE_Y,
                                    chunk->getChunkCoordinates().z * CHUNK_SIZE_Z);
         glm::vec3 maxP = minP + glm::vec3(CHUNK_SIZE_X, CHUNK_SIZE_Y, CHUNK_SIZE_Z);
-        if (this->currentCamera->frustum.IsBoxVisible(minP, maxP)) {
+        if (this->currentCamera->frustum.IsBoxVisible(minP, maxP) && chunk->mustRender) {
             chunk->render(currentCamera, deltaTime);
             this->renderedChunks++;
         }
@@ -100,6 +100,25 @@ void World::putChunk(const std::shared_ptr<Chunk> &chunk) {
         list.erase(result);
     }
     list.push_back(chunk);
+    mutex.unlock();
+}
+
+void World::removeChunk(const std::shared_ptr<Chunk> &chunk) {
+    glm::ivec3 chunkCoordinates = chunk->getChunkCoordinates();
+    int a = std::abs(chunkCoordinates.x % CHUNK_TREE_BUCKET_SIZE);
+    int b = std::abs(chunkCoordinates.y % CHUNK_TREE_BUCKET_SIZE);
+    int c = std::abs(chunkCoordinates.z % CHUNK_TREE_BUCKET_SIZE);
+    std::vector<std::shared_ptr<Chunk>> &list = this->chunks[a][b][c];
+    std::mutex &mutex = this->chunksLock[a][b][c];
+    mutex.lock();
+    auto result = std::find_if(list.begin(), list.end(), [chunkCoordinates](std::shared_ptr<Chunk> chunk) {
+        return chunk->getChunkCoordinates().x == chunkCoordinates.x &&
+               chunk->getChunkCoordinates().y == chunkCoordinates.y &&
+               chunk->getChunkCoordinates().z == chunkCoordinates.z;
+    });
+    if (result != list.end()) {
+        list.erase(result);
+    }
     mutex.unlock();
 }
 

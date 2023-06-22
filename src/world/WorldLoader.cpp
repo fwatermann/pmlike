@@ -58,6 +58,10 @@ void World::chunkGeneratorWorker(int workerId) {
         queue.mutex.unlock(); //Done with operations on queue
 
         if (chunk->generated) continue;
+        if(!isChunkInFrustum(chunk->getChunkCoordinates())) {
+            chunk->generationQueued = false;
+            continue;
+        }
         world->generator->generate(chunk);
 
         world->loadedChunksLock.lock();
@@ -103,6 +107,24 @@ void World::chunkLoaderWorker() {
                 }
             }
         }
+
+        //Check for chunks to unload
+        world->loadedChunksLock.lock();
+        for (auto it = world->loadedChunks.begin(); it != world->loadedChunks.end();) {
+            std::shared_ptr<Chunk> chunk = *it;
+            if (chunk == nullptr) {
+                it = world->loadedChunks.erase(it);
+                continue;
+            }
+            if (!isChunkInFrustum(chunk->getChunkCoordinates()) && !chunk->generationQueued) {
+                it = world->loadedChunks.erase(it);
+                world->removeChunk(chunk);
+                LOG_DF("Unloading Chunk (%d, %d, %d)", chunk->getChunkCoordinates().x, chunk->getChunkCoordinates().y, chunk->getChunkCoordinates().z);
+            } else {
+                it++;
+            }
+        }
+        world->loadedChunksLock.unlock();
 
     }
 }
