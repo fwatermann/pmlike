@@ -54,7 +54,7 @@ void World::render(std::shared_ptr<render::Camera> camera, double deltaTime) {
                                    chunk->getChunkCoordinates().y * CHUNK_SIZE_Y,
                                    chunk->getChunkCoordinates().z * CHUNK_SIZE_Z);
         glm::vec3 maxP = minP + glm::vec3(CHUNK_SIZE_X, CHUNK_SIZE_Y, CHUNK_SIZE_Z);
-        if (this->currentCamera->frustum.IsBoxVisible(minP, maxP) && chunk->mustRender) {
+        if (this->currentCamera->frustum.IsBoxVisible(minP, maxP)) {
             chunk->render(currentCamera, deltaTime);
             this->renderedChunks++;
         }

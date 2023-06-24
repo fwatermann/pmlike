@@ -67,7 +67,7 @@ namespace pmlike::world {
 
             bool running = false;
             int numberGeneratorThreads = 4;
-            glm::ivec3 loadDistance = {16, 8, 16};
+            glm::ivec3 loadDistance = {32, 0, 32};
 
             std::mutex loadedChunksLock;
             std::vector<std::shared_ptr<Chunk>> loadedChunks;
