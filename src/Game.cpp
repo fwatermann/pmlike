@@ -29,6 +29,11 @@ void Game::render(float deltaTime) {
     static bool first = true;
     if (first) {
         glEnable(GL_DEPTH_TEST);
+
+        int maxTextureSize;
+        glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTextureSize);
+        LOG_IF("OpenGL: GL_MAX_TEXTURE_SIZE: %d", maxTextureSize);
+
         first = false;
         world::World::getInstance()->setGenerator(std::make_shared<world::generator::NoiseGenerator>());
         world::World::getInstance()->start();

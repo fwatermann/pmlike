@@ -47,7 +47,7 @@ void Chunk::render(std::shared_ptr<render::Camera> &camera, double deltaTime) {
     shaderProgram->setUniformMat4("projection", camera->projectionMatrix);
     shaderProgram->setUniformMat4("view", camera->viewMatrix);
     shaderProgram->setUniformMat4("model", this->transform);
-    shaderProgram->setUniform2f("textureAtlasSize", 1.0f, 1.0f);
+    shaderProgram->setUniform2f("textureAtlasSize", 2.0f, 1.0f);
 
     textureAtlas->bindToProgram(GL_TEXTURE0, shaderProgram, "textureAtlas");
 
@@ -126,13 +126,23 @@ void Chunk::copyToGPU() {
     LOG_DF("Copied Chunk (%d %d %d) to GPU", this->coordinate.x, this->coordinate.y, this->coordinate.z);
 }
 
+void Chunk::unloadMesh() {
+    this->glDataMutex.lock();
+    glDeleteVertexArrays(1, &this->vao);
+    glDeleteBuffers(1, &this->vbo);
+    this->dirty = false;
+    this->generated = false;
+    this->numberVertices = 0;
+    this->glDataMutex.unlock();
+}
+
 void Chunk::initShaderProgram() {
     pmlike::render::Shader vertexShader = pmlike::render::Shader("shader/ChunkBlock.vsh", GL_VERTEX_SHADER, true);
     pmlike::render::Shader fragmentShader = pmlike::render::Shader("shader/ChunkBlock.fsh", GL_FRAGMENT_SHADER, true);
     pmlike::render::Shader geometryShader = pmlike::render::Shader("shader/ChunkBlock.gsh", GL_GEOMETRY_SHADER, true);
     shaderProgram = new pmlike::render::ShaderProgram(&vertexShader, &fragmentShader, &geometryShader);
 
-    textureAtlas = pmlike::render::Texture::fromFile("assets/textures/block/grass_block.png");
+    textureAtlas = pmlike::render::Texture::fromFile("assets/textures/block/atlas.png");
 
 }
 
@@ -144,7 +154,7 @@ uint8_t Chunk::getVisibleSides(glm::ivec3 blockChunkCoords) {
     uint8_t ret = 0b00000000;
 
     //Chunk borders
-    /*if (x == 0) {
+    if (x == 0) {
         ret |= BLOCK_X_NEG;
     }
     if (x == CHUNK_SIZE_X - 1) {
@@ -161,7 +171,7 @@ uint8_t Chunk::getVisibleSides(glm::ivec3 blockChunkCoords) {
     }
     if (z == CHUNK_SIZE_Z - 1) {
         ret |= BLOCK_Z_POS;
-    }*/
+    }
 
     //Block borders
     if (x > 0 && (material::block::isTransparent(blocks[x - 1][y][z]))) {

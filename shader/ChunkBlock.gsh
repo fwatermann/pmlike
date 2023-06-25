@@ -82,6 +82,10 @@ void main() {
 
 void vertex(vec4 pos, vec4 offset, vec2 textureCoords) {
     gl_Position = projection * view * model * (pos + offset);
-    texCoords = textureCoords;
+    if(textureIndex[0].x < 0 || textureIndex[0].y < 0) {
+        texCoords = vec2(-1, -1);
+    } else {
+        texCoords = textureCoords;
+    }
     EmitVertex();
 }

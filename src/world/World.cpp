@@ -59,6 +59,13 @@ void World::render(std::shared_ptr<render::Camera> camera, double deltaTime) {
             this->renderedChunks++;
         }
     }
+    for(const std::shared_ptr<Chunk> &chunk : this->unloadChunks) {
+        if(chunk == nullptr) continue;
+        chunk->unloadMesh();
+    }
+    this->unloadChunks.clear();
+    this->unloadChunks.shrink_to_fit();
+
     this->loadedChunksLock.unlock();
 
     if (!depthEnabled) glDisable(GL_DEPTH_TEST);
