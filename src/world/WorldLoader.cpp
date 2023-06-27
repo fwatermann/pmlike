@@ -110,20 +110,17 @@ void World::chunkLoaderWorker() {
 
         //Check for chunks to unload
         world->loadedChunksLock.lock();
-        for (auto it = world->loadedChunks.begin(); it != world->loadedChunks.end();) {
-            std::shared_ptr<Chunk> chunk = *it;
-            if (chunk == nullptr) {
-                it = world->loadedChunks.erase(it);
-                continue;
-            }
-            if (!isChunkInFrustum(chunk->getChunkCoordinates()) && !chunk->generationQueued) {
-                it = world->loadedChunks.erase(it);
+        for(const std::shared_ptr<Chunk> &chunk : world->loadedChunks) {
+            glm::ivec3 distance = glm::abs(chunk->getChunkCoordinates() - cameraChunk);
+            if(distance.x > world->loadDistance.x || distance.y > world->loadDistance.y || distance.z > world->loadDistance.z) {
+                world->unloadChunks.push_back(chunk);
                 world->removeChunk(chunk);
-                LOG_DF("Unloading Chunk (%d, %d, %d)", chunk->getChunkCoordinates().x, chunk->getChunkCoordinates().y, chunk->getChunkCoordinates().z);
-            } else {
-                it++;
             }
         }
+        for(const std::shared_ptr<Chunk> &chunk : world->unloadChunks) {
+            world->loadedChunks.erase(std::remove(world->loadedChunks.begin(), world->loadedChunks.end(), chunk), world->loadedChunks.end());
+        }
+
         world->loadedChunksLock.unlock();
 
     }

@@ -23,6 +23,10 @@ Texture *Texture::fromData(uint8_t *data, int width, int height, int channels) {
     return new Texture(data, width, height, channels);
 }
 
+Texture *Texture::Texture::empty(int width, int height) {
+
+}
+
 Texture::Texture(uint8_t *data, int width, int height, int channels) {
     glGenTextures(1, &this->handle);
     glBindTexture(GL_TEXTURE_2D, this->handle);

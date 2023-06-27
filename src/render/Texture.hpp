@@ -20,6 +20,8 @@ namespace pmlike::render {
 
             static Texture *fromData(uint8_t *data, int width, int height, int channels);
 
+            static Texture *empty(int width, int height);
+
             void bind(GLuint slot = 0);
 
             void bindToProgram(GLuint slot, ShaderProgram *program, const std::string &name);

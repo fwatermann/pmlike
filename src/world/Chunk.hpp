@@ -13,10 +13,12 @@
 #include "render/ShaderProgram.hpp"
 #include "world/material/Material.hpp"
 #include "glad/glad.h"
+#include "render/Texture.hpp"
 
-#define CHUNK_SIZE_X 16
-#define CHUNK_SIZE_Y 256
-#define CHUNK_SIZE_Z 16
+#define CHUNK_SIZE_X 32
+#define CHUNK_SIZE_Y 32
+#define CHUNK_SIZE_Z 32
+#define VERTEX_SIZE (5*sizeof(float) + sizeof(uint8_t))
 
 namespace pmlike::world {
 
@@ -30,6 +32,7 @@ namespace pmlike::world {
     class Chunk {
         public:
             static pmlike::render::ShaderProgram *shaderProgram;
+            static pmlike::render::Texture* textureAtlas;
 
             Chunk(glm::ivec3 chunkCoordinates);
 
@@ -41,11 +44,11 @@ namespace pmlike::world {
 
             bool generated = false;
             bool generationQueued = false;
-            bool mustRender = false;
 
             void render(std::shared_ptr<render::Camera> &camera, double deltaTime);
 
             void updateMesh();
+            void unloadMesh();
 
             bool isInFrustum(Frustum &frustum);
 
@@ -56,16 +59,12 @@ namespace pmlike::world {
 
             glm::ivec3 coordinate;
             glm::vec3 minP, maxP;
-
-            GLuint vao = 0, vbo = 0, ebo = 0;
-            GLsizei indexCount;
-
-            std::vector<GLfloat> vertices;
-            std::vector<GLuint> indices;
+            glm::mat4 transform;
 
             std::mutex glDataMutex;
-
-            glm::mat4 transform;
+            GLuint vao = 0, vbo = 0;
+            GLsizeiptr numberVertices = 0;
+            uint8_t* vertices = nullptr;
 
             void copyToGPU();
 
