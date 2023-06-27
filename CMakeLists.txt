@@ -4,7 +4,10 @@ project(PM_Like)
 set(CMAKE_CXX_STANDARD 20)
 
 add_compile_definitions(GLFW_INCLUDE_NONE)
-add_compile_options(-lpsapi)
+
+if(!MSVC)
+    add_compile_options(-lpsapi)
+endif()
 
 ### TARGETS ###
 if(WIN32 AND NOT UNIX)
@@ -37,12 +40,29 @@ message(NOTICE "Library source files: ${LIB_SOURCES}")
 ### LIBRARIES ###
 set(LIB_BINARY_DIR lib/bin/win32)
 if (WIN32)
-    set(LIB_BINARY_DIR lib/bin/win32)
+    if(MSVC)
+        message(NOTICE "Using MSVC")
+        if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+            set(LIB_BINARY_DIR lib/bin/win32-msvc/debug)
+        else()
+            set(LIB_BINARY_DIR lib/bin/win32-msvc/release)
+        endif()
+    else()
+        message(NOTICE "Compiling for Win32")
+        set(LIB_BINARY_DIR lib/bin/win32)
+    endif()
 elseif (UNIX)
     set(LIB_BINARY_DIR lib/bin/unix)
 endif ()
-find_library(LIBGLFW glfw3 PATHS ${LIB_BINARY_DIR} REQUIRED)
+
+# FastNoise2
 find_library(LIBFASTNOISE2 FastNoise PATHS ${LIB_BINARY_DIR} REQUIRED)
+add_compile_definitions(FASTNOISE_STATIC_LIB)
+
+# GLFW
+find_library(LIBGLFW glfw3 PATHS ${LIB_BINARY_DIR} REQUIRED)
+
+message(NOTICE "Libraries: ${LIBGLFW} ${LIBFASTNOISE2}")
 
 ### LINKING ###
 target_link_libraries(PM_Like ${LIBGLFW} ${LIBFASTNOISE2} PM_Like_lib)
