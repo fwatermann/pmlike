@@ -22,7 +22,7 @@ size_t os::getTotalVirtualMemory() {
     memInfo.dwLength = sizeof(MEMORYSTATUSEX);
     GlobalMemoryStatusEx(&memInfo);
     return memInfo.ullTotalPageFile;
-#elif
+#else
     return 0;
 #endif
 }
@@ -34,7 +34,7 @@ size_t os::getUsedVirtualMemory() {
     GlobalMemoryStatusEx(&memInfo);
     DWORDLONG physMemUsed = memInfo.ullTotalPageFile - memInfo.ullAvailPageFile;
     return physMemUsed;
-#elif
+#else
     return 0;
 #endif
 }
@@ -45,7 +45,7 @@ size_t os::getTotalPhysicalMemory() {
     memInfo.dwLength = sizeof(MEMORYSTATUSEX);
     GlobalMemoryStatusEx(&memInfo);
     return memInfo.ullTotalPhys;
-#elif
+#else
     return 0;
 #endif
 }
@@ -57,7 +57,7 @@ size_t os::getUsedPhysicalMemory() {
     GlobalMemoryStatusEx(&memInfo);
     DWORDLONG physMemUsed = memInfo.ullTotalPhys - memInfo.ullAvailPhys;
     return physMemUsed;
-#elif
+#else
     return 0;
 #endif
 }
@@ -67,7 +67,7 @@ size_t os::getUsedVirtualMemoryOfCurrentProcess() {
     PROCESS_MEMORY_COUNTERS_EX pmc;
     GetProcessMemoryInfo(GetCurrentProcess(), (PROCESS_MEMORY_COUNTERS*)&pmc, sizeof(pmc));
     return pmc.PrivateUsage;
-#elif
+#else
     return 0;
 #endif
 }
@@ -77,7 +77,7 @@ size_t os::getUsedPhysicalMemoryOfCurrentProcess() {
     PROCESS_MEMORY_COUNTERS_EX pmc;
     GetProcessMemoryInfo(GetCurrentProcess(), (PROCESS_MEMORY_COUNTERS*)&pmc, sizeof(pmc));
     return pmc.WorkingSetSize;
-#elif
+#else
     return 0;
 #endif
 }
@@ -97,7 +97,7 @@ void os::initCPU() {
     GetProcessTimes(self, &ftime, &ftime, &fsys, &fuser);
     memcpy(&lastSysCPU, &fsys, sizeof(FILETIME));
     memcpy(&lastUserCPU, &fuser, sizeof(FILETIME));
-#elif
+#else
     return;
 #endif
 }
@@ -123,7 +123,7 @@ double os::getCPUUsageOfCurrentProcess() {
     lastSysCPU = sys;
 
     return percent * 100.0f;
-#elif
+#else
     return -1;
 #endif
 }
