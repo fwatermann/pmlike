@@ -42,9 +42,10 @@ elseif (UNIX)
     set(LIB_BINARY_DIR lib/bin/unix)
 endif ()
 find_library(LIBGLFW glfw3 PATHS ${LIB_BINARY_DIR} REQUIRED)
+find_library(LIBFASTNOISE2 FastNoise PATHS ${LIB_BINARY_DIR} REQUIRED)
 
 ### LINKING ###
-target_link_libraries(PM_Like ${LIBGLFW} PM_Like_lib)
+target_link_libraries(PM_Like ${LIBGLFW} ${LIBFASTNOISE2} PM_Like_lib)
 
 ### ASSETS & SHADERS ###
 list(APPEND COPY_DIRS assets shader)
