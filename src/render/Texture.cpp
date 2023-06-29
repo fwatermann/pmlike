@@ -24,7 +24,7 @@ Texture *Texture::fromData(uint8_t *data, int width, int height, int channels) {
 }
 
 Texture *Texture::Texture::empty(int width, int height) {
-
+    return nullptr;
 }
 
 Texture::Texture(uint8_t *data, int width, int height, int channels) {

@@ -7,6 +7,7 @@
 #include "Chunk.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "util/Log.hpp"
+#include "ChunkUtils.hpp"
 
 using namespace pmlike::world;
 
@@ -26,6 +27,7 @@ Chunk::Chunk(glm::ivec3 chunkCoordinates) : coordinate(chunkCoordinates) {
 Chunk::~Chunk() {
     glDeleteVertexArrays(1, &this->vao);
     glDeleteBuffers(1, &this->vbo);
+    std::free(this->vertices);
 };
 
 glm::ivec3 Chunk::getChunkCoordinates() {
@@ -58,7 +60,7 @@ void Chunk::render(std::shared_ptr<render::Camera> &camera, double deltaTime) {
     shaderProgram->unuse();
 }
 
-void Chunk::updateMesh() {
+void Chunk::updateMesh(bool updateNeighbours) {
     this->glDataMutex.lock();
 
     std::free(this->vertices);
@@ -74,7 +76,7 @@ void Chunk::updateMesh() {
                     continue;
                 }
                 glm::vec3 pos = glm::vec3(x, y, z);
-                glm::vec2 textureIndex = glm::vec2(0, 0); //TODO: Get Texture Index based on Atlas
+                glm::vec2 textureIndex = material::block::getTextureIndex(block); //TODO: Get Texture Index based on Atlas
                 std::memcpy(this->vertices + this->numberVertices * VERTEX_SIZE, &pos, 3 * sizeof(float));
                 std::memcpy(this->vertices + this->numberVertices * VERTEX_SIZE + 3 * sizeof(float), &textureIndex, 2 * sizeof(float));
                 std::memcpy(this->vertices + this->numberVertices * VERTEX_SIZE + 5 * sizeof(float), &visibleFaces, sizeof(uint8_t));
@@ -90,11 +92,18 @@ void Chunk::updateMesh() {
 
     this->dirty = true;
     this->glDataMutex.unlock();
+
+    if(updateNeighbours) {
+        std::vector<std::shared_ptr<Chunk>> neighbours = ChunkUtils::getNeighbourChunk(this);
+        for(auto& neighbour : neighbours) {
+            neighbour->updateMesh(false);
+        }
+    }
 }
 
 void Chunk::copyToGPU() {
     this->glDataMutex.lock();
-
+    
     glDeleteVertexArrays(1, &this->vao);
     glDeleteBuffers(1, &this->vbo);
 
@@ -123,7 +132,6 @@ void Chunk::copyToGPU() {
     this->vertices = nullptr;
     this->dirty = false;
     this->glDataMutex.unlock();
-    LOG_DF("Copied Chunk (%d %d %d) to GPU", this->coordinate.x, this->coordinate.y, this->coordinate.z);
 }
 
 void Chunk::unloadMesh() {
@@ -155,22 +163,40 @@ uint8_t Chunk::getVisibleSides(glm::ivec3 blockChunkCoords) {
 
     //Chunk borders
     if (x == 0) {
-        ret |= BLOCK_X_NEG;
+        std::shared_ptr<Chunk> neighbour = ChunkUtils::getChunkAt(this->coordinate + glm::ivec3(-1, 0, 0));
+        if(neighbour != nullptr && world::material::block::isTransparent(neighbour->blocks[CHUNK_SIZE_X - 1][y][z])) {
+            ret |= BLOCK_X_NEG;
+        }
     }
     if (x == CHUNK_SIZE_X - 1) {
-        ret |= BLOCK_X_POS;
+        std::shared_ptr<Chunk> neighbour = ChunkUtils::getChunkAt(this->coordinate + glm::ivec3(1, 0, 0));
+        if(neighbour != nullptr && world::material::block::isTransparent(neighbour->blocks[0][y][z])) {
+            ret |= BLOCK_X_POS;
+        }
     }
     if (y == 0) {
-        ret |= BLOCK_Y_NEG;
+        std::shared_ptr<Chunk> neighbour = ChunkUtils::getChunkAt(this->coordinate + glm::ivec3(0, -1, 0));
+        if(neighbour != nullptr && world::material::block::isTransparent(neighbour->blocks[x][CHUNK_SIZE_Y - 1][z])) {
+            ret |= BLOCK_Y_NEG;
+        }
     }
     if (y == CHUNK_SIZE_Y - 1) {
-        ret |= BLOCK_Y_POS;
+        std::shared_ptr<Chunk> neighbour = ChunkUtils::getChunkAt(this->coordinate + glm::ivec3(0, 1, 0));
+        if(neighbour != nullptr && world::material::block::isTransparent(neighbour->blocks[x][0][z])) {
+            ret |= BLOCK_Y_POS;
+        }
     }
     if (z == 0) {
-        ret |= BLOCK_Z_NEG;
+        std::shared_ptr<Chunk> neighbour = ChunkUtils::getChunkAt(this->coordinate + glm::ivec3(0, 0, -1));
+        if(neighbour != nullptr && world::material::block::isTransparent(neighbour->blocks[x][y][CHUNK_SIZE_Z - 1])) {
+            ret |= BLOCK_Z_NEG;
+        }
     }
     if (z == CHUNK_SIZE_Z - 1) {
-        ret |= BLOCK_Z_POS;
+        std::shared_ptr<Chunk> neighbour = ChunkUtils::getChunkAt(this->coordinate + glm::ivec3(0, 0, 1));
+        if(neighbour != nullptr && world::material::block::isTransparent(neighbour->blocks[x][y][0])) {
+            ret |= BLOCK_Z_POS;
+        }
     }
 
     //Block borders

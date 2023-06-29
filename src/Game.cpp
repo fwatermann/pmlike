@@ -5,15 +5,15 @@
 #include "glm/gtx/string_cast.hpp"
 #include "Game.hpp"
 #include "./util/Log.hpp"
-#include "./world/generator/NoiseGenerator.hpp"
 #include "util/SystemResources.hpp"
 #include "util/LaunchParameter.hpp"
+#include "world/generator/DungeonGenerator.hpp"
 #include <vector>
 
 using namespace pmlike;
 
 Game::Game(GLFWwindow *window) : window(window) {
-    std::shared_ptr<world::generator::NoiseGenerator> generator = std::make_shared<world::generator::NoiseGenerator>();
+    this->generator = std::make_shared<world::generator::DungeonGenerator>();
     this->camera = std::make_shared<render::Camera>();
     this->camera->setPosition(glm::vec3(0, 64, 0));
     this->debug = pmlike::util::LaunchParameter::debug;
@@ -35,7 +35,7 @@ void Game::render(float deltaTime) {
         LOG_IF("OpenGL: GL_MAX_TEXTURE_SIZE: %d", maxTextureSize);
 
         first = false;
-        world::World::getInstance()->setGenerator(std::make_shared<world::generator::NoiseGenerator>());
+        world::World::getInstance()->setGenerator(generator);
         world::World::getInstance()->start();
     }
 
@@ -54,7 +54,7 @@ void Game::render(float deltaTime) {
 
     float movementSpeed = 5.0f;
 
-    if (glfwGetKey(this->window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) {
+    if (glfwGetKey(this->window, GLFW_KEY_R) == GLFW_PRESS) {
         movementSpeed *= 4;
     }
 
@@ -97,7 +97,7 @@ void Game::keyboardInput(int key, int scancode, int action, int mods) {
         if (fullscreen) {
             glfwSetWindowMonitor(this->window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
         } else {
-            glfwSetWindowMonitor(this->window, nullptr, 0, 0, mode->width, mode->height, mode->refreshRate);
+            glfwSetWindowMonitor(this->window, nullptr, mode->width / 2 - (mode->width / 4), mode->height / 2 - (mode->height / 4), mode->width/2, mode->height/2, mode->refreshRate);
         }
     }
     if(key == GLFW_KEY_F3) {
@@ -189,6 +189,7 @@ void Game::renderDebugTexts(float deltaTime) {
     std::string fpsString = "FPS: " + std::to_string(lastFPS) + " FrameTime: " + std::to_string(lastFrameTime) + "ms";
     std::string render = "Render: D:" + glm::to_string(world::World::getInstance()->getLoadDistance()) + " C:" + std::to_string(world::World::getInstance()->renderedChunks);
     std::string chunks = "Chunks: Q: " + std::to_string(world::World::getInstance()->getNumberOfQueuedChunks()) + " L: " + std::to_string(world::World::getInstance()->getNumberOfLoadedChunks());
+    std::string noises = "Noise: N: " + std::to_string(generator->noise->GenSingle3D(this->camera->position.x / 100.0f, this->camera->position.y / 100.0f, this->camera->position.z / 100.0f, INT32_MAX));
     std::string systemMem = "Memory: " + std::to_string(totalUsedVirtualMemory) + "/" + std::to_string(totalVirtualMemory) + "MB";
     std::string systemCpu = "CPU: " + std::to_string(cpuUsage) + "%";
 
@@ -198,6 +199,7 @@ void Game::renderDebugTexts(float deltaTime) {
     this->debugFont->renderText(dirString.c_str(), 5, 55, 20, 0, projection, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
     this->debugFont->renderText(render.c_str(), 5, 80, 20, 0, projection, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
     this->debugFont->renderText(chunks.c_str(), 5, 105, 20, 0, projection, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+    this->debugFont->renderText(noises.c_str(), 5, 130, 20, 0, projection, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
     this->debugFont->renderText(systemMem.c_str(), width - 5, 5, 20, 0, projection, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), pmlike::render::Alignment::END, pmlike::render::Alignment::BEGIN);
     this->debugFont->renderText(systemCpu.c_str(), width - 5, 30, 20, 0, projection, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), pmlike::render::Alignment::END, pmlike::render::Alignment::BEGIN);
 }

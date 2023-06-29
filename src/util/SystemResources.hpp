@@ -11,6 +11,8 @@
 #include <windows.h>
 #include <psapi.h>
 #endif
+#undef min
+#undef max
 
 namespace pmlike::util::os {
     static const size_t MB = 1024 * 1024;

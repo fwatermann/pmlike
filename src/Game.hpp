@@ -8,6 +8,7 @@
 #include "GLFW/glfw3.h"
 #include "world/World.hpp"
 #include "render/Font.hpp"
+#include "world/generator/DungeonGenerator.hpp"
 
 #define GAME_VERSION "0.1"
 
@@ -38,8 +39,11 @@ namespace pmlike {
 
             GLFWwindow *window;
             pmlike::render::Font *debugFont = nullptr;
+            std::shared_ptr<world::generator::DungeonGenerator> generator;
 
             void renderDebugTexts(float deltaTime);
+
+
 
     };
 

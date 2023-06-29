@@ -91,7 +91,7 @@ std::shared_ptr<Chunk> World::getChunk(glm::ivec3 chunkCoordinates) {
 
 void World::putChunk(const std::shared_ptr<Chunk> &chunk) {
     glm::ivec3 chunkCoordinates = chunk->getChunkCoordinates();
-    LOG_DF("Generation Chunk at %d %d %d", chunkCoordinates.x, chunkCoordinates.y, chunkCoordinates.z);
+    //LOG_DF("Generation Chunk at %d %d %d", chunkCoordinates.x, chunkCoordinates.y, chunkCoordinates.z);
     int a = std::abs(chunkCoordinates.x % CHUNK_TREE_BUCKET_SIZE);
     int b = std::abs(chunkCoordinates.y % CHUNK_TREE_BUCKET_SIZE);
     int c = std::abs(chunkCoordinates.z % CHUNK_TREE_BUCKET_SIZE);
@@ -126,6 +126,7 @@ void World::removeChunk(const std::shared_ptr<Chunk> &chunk) {
     if (result != list.end()) {
         list.erase(result);
     }
+    list.shrink_to_fit();
     mutex.unlock();
 }
 

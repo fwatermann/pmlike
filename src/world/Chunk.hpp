@@ -47,7 +47,7 @@ namespace pmlike::world {
 
             void render(std::shared_ptr<render::Camera> &camera, double deltaTime);
 
-            void updateMesh();
+            void updateMesh(bool updateNeighbours);
             void unloadMesh();
 
             bool isInFrustum(Frustum &frustum);
