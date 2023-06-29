@@ -15,7 +15,7 @@ using namespace pmlike;
 Game::Game(GLFWwindow *window) : window(window) {
     this->generator = std::make_shared<world::generator::DungeonGenerator>();
     this->camera = std::make_shared<render::Camera>();
-    this->camera->setPosition(glm::vec3(0, 64, 0));
+    this->camera->setPosition(glm::vec3(0, 0, 0));
     this->debug = pmlike::util::LaunchParameter::debug;
 
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -189,7 +189,7 @@ void Game::renderDebugTexts(float deltaTime) {
     std::string fpsString = "FPS: " + std::to_string(lastFPS) + " FrameTime: " + std::to_string(lastFrameTime) + "ms";
     std::string render = "Render: D:" + glm::to_string(world::World::getInstance()->getLoadDistance()) + " C:" + std::to_string(world::World::getInstance()->renderedChunks);
     std::string chunks = "Chunks: Q: " + std::to_string(world::World::getInstance()->getNumberOfQueuedChunks()) + " L: " + std::to_string(world::World::getInstance()->getNumberOfLoadedChunks());
-    std::string noises = "Noise: N: " + std::to_string(generator->noise->GenSingle3D(this->camera->position.x / 100.0f, this->camera->position.y / 100.0f, this->camera->position.z / 100.0f, INT32_MAX));
+    std::string noises = "Noise: N: " + std::to_string(generator->noise->GenSingle3D(this->camera->position.x / 100.0f, this->camera->position.y / 100.0f, this->camera->position.z / 100.0f, this->generator->getSeed())) + " Seed: " + std::to_string(this->generator->getSeed());
     std::string systemMem = "Memory: " + std::to_string(totalUsedVirtualMemory) + "/" + std::to_string(totalVirtualMemory) + "MB";
     std::string systemCpu = "CPU: " + std::to_string(cpuUsage) + "%";
 

@@ -19,7 +19,7 @@ void TestGenerator::generate(std::shared_ptr<world::Chunk> chunk) {
         for (int x = 0; x < CHUNK_SIZE_X; x++) {
             for (int y = 0; y < CHUNK_SIZE_Y; y++) {
                 for (int z = 0; z < CHUNK_SIZE_Z; z++) {
-                    chunk->blocks[x][y][z] = world::material::block::BlockMaterial::GRASS_BLOCK;
+                    chunk->blockAt(glm::ivec3(x, y, z), world::material::block::BlockMaterial::GRASS_BLOCK);
                 }
             }
         }
@@ -27,7 +27,7 @@ void TestGenerator::generate(std::shared_ptr<world::Chunk> chunk) {
         for (int x = 0; x < CHUNK_SIZE_X; x++) {
             for (int y = 0; y < CHUNK_SIZE_Y; y++) {
                 for (int z = 0; z < CHUNK_SIZE_Z; z++) {
-                    chunk->blocks[x][y][z] = world::material::block::BlockMaterial::AIR;
+                    chunk->blockAt(glm::ivec3(x, y, z), world::material::block::BlockMaterial::AIR);
                 }
             }
         }

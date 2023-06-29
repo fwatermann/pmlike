@@ -12,15 +12,19 @@ namespace pmlike::world::generator {
 
     class DungeonGenerator : public ChunkGenerator {
         public:
+            explicit DungeonGenerator(int seed);
             DungeonGenerator();
-
             ~DungeonGenerator();
 
             void generate(std::shared_ptr<world::Chunk> chunk) final;
 
             FastNoise::SmartNode<FastNoise::Generator> noise;
 
+            int getSeed();
+
     private:
+
+            int seed;
 
             inline bool between(float value, float min, float max) {
                 return value >= min && value <= max;

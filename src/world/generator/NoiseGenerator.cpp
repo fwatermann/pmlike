@@ -26,10 +26,10 @@ void NoiseGenerator::generate(std::shared_ptr<world::Chunk> chunk) {
                 glm::ivec3 blockCoords = {worldCoords.x + x, worldCoords.y + y, worldCoords.z + z};
                 float noise = glm::perlin(glm::vec2(blockCoords.x, blockCoords.z) / 250.0f) * 64.0f + 64.0f;
                 if (noise > blockCoords.y) {
-                    chunk->blocks[x][y][z] = world::material::block::BlockMaterial::STONE;
+                    chunk->blockAt(glm::ivec3(x, y, z), world::material::block::BlockMaterial::STONE);
                     continue;
                 }
-                chunk->blocks[x][y][z] = world::material::block::BlockMaterial::AIR;
+                chunk->blockAt(glm::ivec3(x, y, z), world::material::block::BlockMaterial::AIR);
             }
         }
     }

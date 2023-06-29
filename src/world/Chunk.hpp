@@ -34,11 +34,11 @@ namespace pmlike::world {
             static pmlike::render::ShaderProgram *shaderProgram;
             static pmlike::render::Texture* textureAtlas;
 
+            bool destroyed = false;
+
             Chunk(glm::ivec3 chunkCoordinates);
 
             ~Chunk();
-
-            world::material::block::BlockMaterial blocks[CHUNK_SIZE_X][CHUNK_SIZE_Y][CHUNK_SIZE_Z];
 
             glm::ivec3 getChunkCoordinates();
 
@@ -49,6 +49,9 @@ namespace pmlike::world {
 
             void updateMesh(bool updateNeighbours);
             void unloadMesh();
+
+            world::material::block::BlockMaterial blockAt(glm::ivec3 blockChunkCoords);
+            void blockAt(glm::ivec3 blockChunkCoords, world::material::block::BlockMaterial block);
 
             bool isInFrustum(Frustum &frustum);
 
@@ -65,6 +68,8 @@ namespace pmlike::world {
             GLuint vao = 0, vbo = 0;
             GLsizeiptr numberVertices = 0;
             uint8_t* vertices = nullptr;
+
+            world::material::block::BlockMaterial blocks[CHUNK_SIZE_X][CHUNK_SIZE_Y][CHUNK_SIZE_Z];
 
             void copyToGPU();
 

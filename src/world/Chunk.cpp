@@ -27,6 +27,7 @@ Chunk::Chunk(glm::ivec3 chunkCoordinates) : coordinate(chunkCoordinates) {
 Chunk::~Chunk() {
     glDeleteVertexArrays(1, &this->vao);
     glDeleteBuffers(1, &this->vbo);
+    this->destroyed = true;
     std::free(this->vertices);
 };
 
@@ -103,30 +104,41 @@ void Chunk::updateMesh(bool updateNeighbours) {
 
 void Chunk::copyToGPU() {
     this->glDataMutex.lock();
-    
-    glDeleteVertexArrays(1, &this->vao);
-    glDeleteBuffers(1, &this->vbo);
 
-    glGenVertexArrays(1, &this->vao);
-    glGenBuffers(1, &this->vbo);
+    bool setupVAO = false;
 
-    glBindVertexArray(this->vao);
+    if(this->vao == 0) {
+        setupVAO = true;
+        glGenVertexArrays(1, &this->vao);
+        glBindVertexArray(this->vao);
+    }
+    if(this->vbo == 0) {
+        glGenBuffers(1, &this->vbo);
+    }
 
     glBindBuffer(GL_ARRAY_BUFFER, this->vbo);
     glBufferData(GL_ARRAY_BUFFER, this->numberVertices * VERTEX_SIZE, vertices, GL_STATIC_DRAW);
 
-    GLsizei stride = (3 + 2) * sizeof(float) + 1 * sizeof(uint8_t);
+    if(setupVAO) {
+        GLsizei stride = (3 + 2) * sizeof(float) + 1 * sizeof(uint8_t);
 
-    glEnableVertexAttribArray(shaderProgram->getAttribLocation("aPosition"));
-    glVertexAttribPointer(shaderProgram->getAttribLocation("aPosition"), 3, GL_FLOAT, GL_FALSE, stride, (GLvoid *) 0);
+        glEnableVertexAttribArray(shaderProgram->getAttribLocation("aPosition"));
+        glVertexAttribPointer(shaderProgram->getAttribLocation("aPosition"), 3, GL_FLOAT, GL_FALSE, stride,
+                              (GLvoid *) 0);
 
-    glEnableVertexAttribArray(shaderProgram->getAttribLocation("aTextureIndex"));
-    glVertexAttribPointer(shaderProgram->getAttribLocation("aTextureIndex"), 2, GL_FLOAT, GL_FALSE, stride, (GLvoid *) (3 * sizeof(float)));
+        glEnableVertexAttribArray(shaderProgram->getAttribLocation("aTextureIndex"));
+        glVertexAttribPointer(shaderProgram->getAttribLocation("aTextureIndex"), 2, GL_FLOAT, GL_FALSE, stride,
+                              (GLvoid *) (3 * sizeof(float)));
 
-    glEnableVertexAttribArray(shaderProgram->getAttribLocation("aVisibleFaces"));
-    glVertexAttribIPointer(shaderProgram->getAttribLocation("aVisibleFaces"), 1, GL_UNSIGNED_BYTE, stride, (GLvoid *) (5 * sizeof(float)));
+        glEnableVertexAttribArray(shaderProgram->getAttribLocation("aVisibleFaces"));
+        glVertexAttribIPointer(shaderProgram->getAttribLocation("aVisibleFaces"), 1, GL_UNSIGNED_BYTE, stride,
+                               (GLvoid *) (5 * sizeof(float)));
 
-    glBindVertexArray(0);
+        glBindVertexArray(0);
+    }
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+
 
     std::free(this->vertices);
     this->vertices = nullptr;
@@ -164,37 +176,37 @@ uint8_t Chunk::getVisibleSides(glm::ivec3 blockChunkCoords) {
     //Chunk borders
     if (x == 0) {
         std::shared_ptr<Chunk> neighbour = ChunkUtils::getChunkAt(this->coordinate + glm::ivec3(-1, 0, 0));
-        if(neighbour != nullptr && world::material::block::isTransparent(neighbour->blocks[CHUNK_SIZE_X - 1][y][z])) {
+        if(neighbour != nullptr && !neighbour->destroyed && material::block::isTransparent(neighbour->blocks[CHUNK_SIZE_X - 1][y][z])) {
             ret |= BLOCK_X_NEG;
         }
     }
     if (x == CHUNK_SIZE_X - 1) {
         std::shared_ptr<Chunk> neighbour = ChunkUtils::getChunkAt(this->coordinate + glm::ivec3(1, 0, 0));
-        if(neighbour != nullptr && world::material::block::isTransparent(neighbour->blocks[0][y][z])) {
+        if(neighbour != nullptr && !neighbour->destroyed && material::block::isTransparent(neighbour->blocks[0][y][z])) {
             ret |= BLOCK_X_POS;
         }
     }
     if (y == 0) {
         std::shared_ptr<Chunk> neighbour = ChunkUtils::getChunkAt(this->coordinate + glm::ivec3(0, -1, 0));
-        if(neighbour != nullptr && world::material::block::isTransparent(neighbour->blocks[x][CHUNK_SIZE_Y - 1][z])) {
+        if(neighbour != nullptr && !neighbour->destroyed && material::block::isTransparent(neighbour->blocks[x][CHUNK_SIZE_Y - 1][z])) {
             ret |= BLOCK_Y_NEG;
         }
     }
     if (y == CHUNK_SIZE_Y - 1) {
         std::shared_ptr<Chunk> neighbour = ChunkUtils::getChunkAt(this->coordinate + glm::ivec3(0, 1, 0));
-        if(neighbour != nullptr && world::material::block::isTransparent(neighbour->blocks[x][0][z])) {
+        if(neighbour != nullptr && !neighbour->destroyed && material::block::isTransparent(neighbour->blocks[x][0][z])) {
             ret |= BLOCK_Y_POS;
         }
     }
     if (z == 0) {
         std::shared_ptr<Chunk> neighbour = ChunkUtils::getChunkAt(this->coordinate + glm::ivec3(0, 0, -1));
-        if(neighbour != nullptr && world::material::block::isTransparent(neighbour->blocks[x][y][CHUNK_SIZE_Z - 1])) {
+        if(neighbour != nullptr && !neighbour->destroyed && material::block::isTransparent(neighbour->blocks[x][y][CHUNK_SIZE_Z - 1])) {
             ret |= BLOCK_Z_NEG;
         }
     }
     if (z == CHUNK_SIZE_Z - 1) {
         std::shared_ptr<Chunk> neighbour = ChunkUtils::getChunkAt(this->coordinate + glm::ivec3(0, 0, 1));
-        if(neighbour != nullptr && world::material::block::isTransparent(neighbour->blocks[x][y][0])) {
+        if(neighbour != nullptr && !neighbour->destroyed && material::block::isTransparent(neighbour->blocks[x][y][0])) {
             ret |= BLOCK_Z_POS;
         }
     }
@@ -224,4 +236,12 @@ uint8_t Chunk::getVisibleSides(glm::ivec3 blockChunkCoords) {
 
 bool Chunk::isInFrustum(Frustum &frustum) {
     return frustum.IsBoxVisible(this->minP, this->maxP);
+}
+
+material::block::BlockMaterial Chunk::blockAt(glm::ivec3 blockChunkCoords) {
+    return this->blocks[blockChunkCoords.x][blockChunkCoords.y][blockChunkCoords.z];
+}
+
+void Chunk::blockAt(glm::ivec3 blockChunkCoords, material::block::BlockMaterial material) {
+    this->blocks[blockChunkCoords.x][blockChunkCoords.y][blockChunkCoords.z] = material;
 }
